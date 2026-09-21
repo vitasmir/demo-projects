@@ -1,0 +1,13 @@
+# Default Kibana configuration for docker-compose
+
+server.host: "0.0.0.0"
+server.name: "kibana"
+elasticsearch.hosts: ["http://elasticsearch:9200"]
+kibana.index: ".kibana"
+elasticsearch.ssl.verificationMode: "none"
+xpack.monitoring.ui.enabled: true
+xpack.monitoring.enabled: true
+xpack.monitoring.kibana.collection.enabled: true
+xpack.security.enabled: true
+xpack.reporting.enabled: false
+xpack.graph.enabled: false

@@ -1,0 +1,150 @@
+<div class="container modal-content">
+
+    <form #employeeForm="ngForm" (ngSubmit)="onSubmit(employeeForm)">
+
+        <h2 class="text-center m-2">{{ getModalTitle() | translate }}</h2>
+
+
+
+        <div class="form-group m-2">
+            <label>{{ 'name' | translate }}</label>
+            <input type="text" class="form-control" (ngModelChange)="checkEmployeeName($event)"
+                placeholder="{{ 'enter-name' | translate }}" autocomplete="off" #name="ngModel" name="name" required matInput
+                [(ngModel)]="employeeObject.name" [disabled]="isEditMode">
+            <div *ngIf="name.invalid && (name.dirty || name.touched)" class="text-danger">
+                {{ 'name-is-required' | translate }}
+            </div>
+            <div *ngIf="employeeNameExists && ((name.dirty || name.touched))" class="text-danger">
+                {{ 'employee-name-exists' | translate }}
+            </div>
+        </div>
+
+        <div class="form-group m-2">
+            <label>{{ 'first-name' | translate }}</label>
+            <input type="text" class="form-control" placeholder="{{ 'enter-first-name' | translate }}" autocomplete="off"
+                #firstName="ngModel" name="firstName" required matInput [(ngModel)]="employeeObject.firstName">
+            <div *ngIf="firstName.invalid && (firstName.dirty || firstName.touched)" class="text-danger">
+                {{ 'first-name-is-required' | translate }}
+            </div>
+        </div>
+
+        <div class="form-group m-2">
+            <label>{{ 'last-name' | translate }}</label>
+            <input type="text" class="form-control" placeholder="{{ 'enter-last-name' | translate }}" autocomplete="off"
+                #lastName="ngModel" name="lastName" required matInput [(ngModel)]="employeeObject.lastName">
+            <div *ngIf="lastName.invalid && (lastName.dirty || lastName.touched)" class="text-danger">
+                {{ 'last-name-is-required' | translate }}
+            </div>
+        </div>
+
+
+
+
+        <div class="form-group m-2">
+            <label>{{ 'position' | translate }}</label>
+            <input type="text" class="form-control" placeholder="{{ 'enter-position' | translate }}" #position="ngModel"
+                name="position" autocomplete="off"required matInput [(ngModel)]="employeeObject.position">
+            <div *ngIf="position.invalid && (position.dirty || position.touched)" class="text-danger">
+                {{ 'position-is-required' | translate }}
+            </div>
+        </div>
+
+        <div class="form-group m-2">
+            <label>{{ 'manager' | translate }}</label>
+            <div class="input-group">
+                <input type="text" class="form-control" [value]="getSelectedManagerName()" autocomplete="off" readonly (click)="openManagerSelector()" style="cursor: pointer;">
+                <button type="button" class="btn btn-outline-secondary" (click)="openManagerSelector()">{{ 'select' | translate }}</button>
+                <button type="button" class="btn btn-outline-danger ms-2" (click)="clearManager()">{{ 'clear' | translate }}</button>
+            </div>
+            <input type="hidden" name="managerId" [value]="employeeObject.manager?.id || ''" />
+        </div>
+
+        <div class="form-group m-2">
+            <label class="manager-rights-control">
+                <input type="checkbox" class="form-check-input" name="hasManagerRights" autocomplete="off"
+                    [(ngModel)]="employeeObject.hasManagerRights">
+                <span>{{ 'has-manager-rights' | translate }}</span>
+            </label>
+        </div>
+
+
+        <div class="form-group m-2">
+            <label>{{ 'salary' | translate }}</label>
+            <input type="number" class="form-control" autocomplete="off"placeholder="{{ 'enter-salary' | translate }}" #salary="ngModel"
+                name="salary" required min="0" matInput [(ngModel)]="employeeObject.salary">
+            <div *ngIf="salary.invalid && (salary.dirty || salary.touched)" class="text-danger">
+                <div *ngIf="salary.errors?.['required']">{{ 'salary-is-required' | translate }}</div>
+                <div *ngIf="salary.errors?.['min']">{{ 'salary-must-be-positive' | translate }}</div>
+            </div>
+        </div>
+
+        <div class="form-group m-2">
+            <label>{{ 'start-date' | translate }}</label>
+            <div class="date-input-wrap">
+                <input
+                    #startDateInput
+                    #startDateModel="ngModel"
+                    id="startDate"
+                    type="text"
+                    class="form-control employee-date-input"
+                    name="startDateDisplay"
+                    [ngModel]="startDateDisplay"
+                    autocomplete="off"
+                    placeholder="dd.mm.rrrr"
+                    required
+                    (change)="handleStartDateInput(startDateInput.value)" />
+                <button
+                    type="button"
+                    class="date-input-icon"
+                    aria-label="Open start date calendar"
+                    (click)="openStartDatePicker()">
+                    <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h1V3a1 1 0 0 1 1-1Zm12 8H5v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8ZM6 6a1 1 0 0 0-1 1v1h14V7a1 1 0 0 0-1-1H6Zm2 6h2v2H8v-2Zm4 0h2v2h-2v-2Zm4 0h2v2h-2v-2Zm-8 4h2v2H8v-2Zm4 0h2v2h-2v-2Z" />
+                    </svg>
+                </button>
+            </div>
+            <div *ngIf="(startDateModel.invalid && (startDateModel.dirty || startDateModel.touched)) || (!isStartDateValid() && (startDateModel.dirty || startDateModel.touched))" class="text-danger">
+                {{ 'start-date-is-required' | translate }}
+            </div>
+        </div>
+        <!-- <script>
+            $(function () {
+                $("#startDate").datepicker({
+                    dateFormat: 'yy-M-dd',
+                    onSelect: function (dateText) {
+                        employeeObject.start_date = dateText;
+                    }
+                });
+            });
+        </script> -->
+
+        <div class="form-group m-2">
+            <label>{{ 'office' | translate }}</label>
+            <input type="text" class="form-control" autocomplete="off" placeholder="{{ 'enter-office' | translate }}" #office="ngModel"
+                name="office" required matInput [(ngModel)]="employeeObject.office">
+            <div *ngIf="office.invalid && (office.dirty || office.touched)" class="text-danger">
+                {{ 'office-is-required' | translate }}
+            </div>
+        </div>
+        <div class="form-group m-2">
+            <label>{{ 'extn' | translate }}</label>
+            <input type="text" class="form-control" autocomplete="off" placeholder="{{ 'enter-extension' | translate }}" #extn="ngModel"
+                name="extn" required matInput [(ngModel)]="employeeObject.extn">
+            <div *ngIf="extn.invalid && (extn.dirty || extn.touched)" class="text-danger">
+                {{ 'extension-is-required' | translate }}
+            </div>
+        </div>
+
+        <div class="button-group m-2">
+            <button type="submit" class="btn btn-success m-2" [disabled]="!employeeForm.valid || employeeNameCheckPending">
+                {{ 'submit' | translate }}
+            </button>
+
+            <button matInput type="button" class="btn btn-secondary m-2" (click)="onClose()">
+                {{ 'close' | translate }}
+            </button>
+        </div>
+
+    </form>
+
+</div>

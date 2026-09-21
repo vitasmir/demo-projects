@@ -1,0 +1,30 @@
+<div class="modal-content p-3">
+  <h3 class="mb-2">{{ 'select-manager' | translate }}</h3>
+
+  <div *ngIf="loading" class="spinner-container">
+    <mat-progress-spinner color="primary" mode="indeterminate"></mat-progress-spinner>
+  </div>
+
+  <div class="table-container" *ngIf="!loading">
+    <table id="managerTable" class="display table table-striped table-hover table-bordered">
+      <thead>
+        <tr>
+          <th>{{ 'first-name' | translate }}</th>
+          <th>{{ 'last-name' | translate }}</th>
+          <th>{{ 'position' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let m of managers" [attr.data-id]="m.id">
+          <td>{{ m.firstName }}</td>
+          <td>{{ m.lastName }}</td>
+          <td>{{ m.position }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="text-end mt-2">
+    <button mat-button class="btn btn-secondary" (click)="close()">{{ 'close' | translate }}</button>
+  </div>
+</div>

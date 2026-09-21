@@ -1,0 +1,50 @@
+$borderWidth : 1px;
+
+.light-pink-background {
+  background: #fff0f6;
+  padding: 12px;
+}
+
+table,
+th,
+td {
+    border-width: $borderWidth;
+    // border-radius: 20px;
+}
+
+.borderedDiv {
+    border: solid;
+    // border-radius: 10px;
+    background-color: yellow;
+    border-width: 1px;
+    border-collapse: collapse;
+}
+
+.border {
+    border-width: 1px;
+    border-collapse: collapse;
+}
+
+
+body {
+    background: #a4bacc99;
+    color: #226daa;
+    font-family: Raleway, sans-serif;
+    accent-color: #226DAA;
+}
+
+a:hover,
+a:focus {
+    text-underline-offset: 0.25em;
+}
+
+[aria-label="close"] {
+    appearance: none;
+    float: right;
+    border: 1px solid;
+    border-radius: 50%;
+}
+
+dialog :focus {
+    outline: 2px solid #226DAA;
+}

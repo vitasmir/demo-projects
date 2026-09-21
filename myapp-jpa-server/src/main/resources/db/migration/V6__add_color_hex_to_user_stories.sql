@@ -1,0 +1,1 @@
+ALTER TABLE tm_user_stories ADD COLUMN color_hex VARCHAR(7) DEFAULT '#FFF8DC';

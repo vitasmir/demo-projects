@@ -1,0 +1,115 @@
+<ng-container *ngIf="isAuthenticated(); else unauthenticatedTemplate">
+    <div>
+        <div class="row">
+            <div class="col col-md-2 nav-column">
+                <ul class="nav flex-column">
+                    <li class="nav-item mb-2">
+                        <div class="fw-semibold mb-2" *ngIf="username() as currentUsername">
+                            User: {{ currentUsername }}
+                        </div>
+                    <button class="btn btn-outline-danger" (click)="logout()" [disabled]="!isAuthenticated()">Logout</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-primary" routerLinkActive="active"
+                            routerLink="/datatable1">Human Resources</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-primary" routerLinkActive="active"
+                            routerLink="/datatable2">Human Resources 2</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-primary" routerLinkActive="active" routerLink="/trees-of-employees">Employee
+                            hierarchy</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-primary" routerLinkActive="active"
+                            routerLink="/employee-backup">Employee backup</button>
+                    </li>
+
+                    <li class="nav-item">
+                        <button class="btn btn-primary" routerLinkActive="active" routerLink="/profile">Profile</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-primary" routerLinkActive="active" routerLink="/data-binding">Data
+                            binding</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-primary" routerLinkActive="active" routerLink="/todo-list">Todo list</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-primary" routerLinkActive="active" routerLink="/chat">Chat</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-primary" routerLinkActive="active" routerLink="/akcie">Securities</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-primary" routerLinkActive="active" routerLink="/broker">Broker</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-primary"
+                            routerLinkActive="active"
+                            [routerLinkActiveOptions]="{ exact: true }"
+                            routerLink="/boat-rental">Rezervace lodek</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-primary"
+                            routerLinkActive="active"
+                            [routerLinkActiveOptions]="{ exact: true }"
+                            routerLink="/boat-rental-admin">Administrace lodek</button>
+                    </li>
+                    <li class="nav-item">
+                        <a class="visually-hidden"
+                            routerLink="/task-management"
+                            routerLinkActive
+                            #taskManagementRootLink="routerLinkActive"
+                            [routerLinkActiveOptions]="{ paths: 'exact', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' }"
+                            aria-hidden="true"
+                            tabindex="-1">Task management dashboard</a>
+                        <a class="visually-hidden"
+                            routerLink="/task-management/projects"
+                            routerLinkActive
+                            #taskManagementProjectsLink="routerLinkActive"
+                            [routerLinkActiveOptions]="{ exact: false }"
+                            aria-hidden="true"
+                            tabindex="-1">Task management projects</a>
+                        <a class="visually-hidden"
+                            routerLink="/task-management/project-access"
+                            routerLinkActive
+                            #taskManagementProjectAccessLink="routerLinkActive"
+                            [routerLinkActiveOptions]="{ exact: false }"
+                            aria-hidden="true"
+                            tabindex="-1">Task management project access</a>
+                        <button class="btn btn-primary"
+                            [class.active]="taskManagementRootLink.isActive || taskManagementProjectsLink.isActive || taskManagementProjectAccessLink.isActive"
+                            routerLink="/task-management/projects">
+                            Project&nbsp;Management (SCRUM)
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-primary"
+                            routerLinkActive="active"
+                            [routerLinkActiveOptions]="{ paths: 'exact', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' }"
+                            routerLink="/task-management/accounts">Account Management</button>
+                    </li>
+                </ul>
+            </div>
+            <div class="col content-column">
+                <router-outlet />
+            </div>
+        </div>
+    </div>
+</ng-container>
+
+<ng-template #unauthenticatedTemplate>
+    <ng-container *ngIf="isPublicTaskManagementRoute(); else authPendingTemplate">
+        <router-outlet />
+    </ng-container>
+</ng-template>
+
+<ng-template #authPendingTemplate>
+    <div
+        class="auth-blank-screen"
+        [attr.aria-busy]="true"
+        [attr.aria-label]="isAuthInitialized() ? 'Redirecting to Keycloak login' : 'Checking authentication'">
+    </div>
+</ng-template>

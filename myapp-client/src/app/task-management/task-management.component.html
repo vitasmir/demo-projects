@@ -1,0 +1,972 @@
+<div class="container py-3">
+    <h2>Task management system (SCRUM)</h2>
+
+
+    @if (errorMessage !== '') {
+    <div class="alert alert-danger">{{ errorMessage }}</div>
+    }
+
+    @if (currentUser == null) {
+    @if (initializingCurrentUser) {
+    <div class="alert alert-info py-2">Načítám Task Management uživatele z JWT tokenu…</div>
+    } @else {
+    <div class="alert alert-warning py-2">Task Management uživatel není dostupný. Přihlas se přes Keycloak a obnov stránku.</div>
+    }
+    } @else {
+
+    @if (selectedProjectId == null) {
+    <div class="alert alert-warning d-flex justify-content-between align-items-center gap-3 flex-wrap">
+        <div>Nejprve vyber projekt na stránce projektů.</div>
+        <button class="btn btn-sm btn-primary" (click)="goToProjects()">Otevřít projekty</button>
+    </div>
+    } @else {
+    <div class="alert alert-secondary d-flex justify-content-between align-items-center gap-3 flex-wrap">
+        <div>Aktivní projekt: <strong>{{ selectedProjectName }}</strong> (ID: {{ selectedProjectId }})</div>
+        <button class="btn btn-sm btn-outline-secondary" (click)="goToProjects()">Správa projektů</button>
+    </div>
+    }
+
+    <div class="card p-3 mb-3">
+        <div class="top-workflow-tabs mb-3">
+            <button class="btn" [class.btn-primary]="activeTopMenu === 'sprints'" [class.btn-outline-primary]="activeTopMenu !== 'sprints'" (click)="showMenu('sprints')">Sprints</button>
+            <button class="btn" [class.btn-primary]="activeTopMenu === 'stories'" [class.btn-outline-primary]="activeTopMenu !== 'stories'" (click)="showMenu('stories')">User stories</button>
+            <button class="btn" [class.btn-primary]="activeTopMenu === 'tasks'" [class.btn-outline-primary]="activeTopMenu !== 'tasks'" (click)="showMenu('tasks')">Tasks</button>
+            <button class="btn" [class.btn-primary]="activeTopMenu === 'my-tasks'" [class.btn-outline-primary]="activeTopMenu !== 'my-tasks'" (click)="showMenu('my-tasks')">Moje tasky</button>
+        </div>
+
+        <div class="row g-2">
+            <div class="col-md-6">
+                <label>Sprint</label>
+                <select class="form-select" [disabled]="selectedProjectId == null" [ngModel]="selectedSprintId" (ngModelChange)="onMenuSprintChange($event)">
+                    <option [ngValue]="null">{{ sprints.length === 0 ? 'Nejsou dostupné žádné sprinty' : 'Vyber sprint' }}</option>
+                    @for (sprint of sprints; track sprint.id) {
+                    <option [ngValue]="sprint.id">#{{ sprintDisplayNumber(sprint) }} - {{ sprint.name }} ({{ formatDate(sprint.startDate) }} - {{ formatDate(sprint.endDate) }})</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-6 d-flex align-items-end">
+                @if (selectedProjectId == null) {
+                <div class="small text-muted">Nejprve vytvoř nebo vyber projekt.</div>
+                } @else if (selectedStory() != null) {
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <div class="small text-muted">
+                        Vybraná story: <strong>#{{ selectedStory()!.id }}</strong> {{ selectedStory()!.title }} · SP: <strong>{{ selectedStory()!.difficulty }}</strong>
+                    </div>
+                    <button class="btn btn-sm btn-outline-secondary" (click)="openStoryEditDialog(selectedStory()!)">Upravit</button>
+                </div>
+                } @else {
+                <div class="small text-muted">Vyber sprint a potom user story kliknutím v dashboardu.</div>
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (activeTopMenu === 'sprints') {
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <div class="card p-3">
+                <h5>Nový sprint</h5>
+                <input class="form-control mb-2" placeholder="Název" [(ngModel)]="sprintForm.name" />
+                <label>Od</label>
+                <input
+                    class="form-control mb-2"
+                    #sprintStartDateInput
+                    type="text"
+                    [value]="sprintVisibleDates.startDate"
+                    autocomplete="off"
+                    placeholder="dd.mm.rrrr"
+                    aria-label="Datum začátku sprintu"
+                    (change)="handleSprintVisibleDateChange('startDate', sprintStartDateInput.value)" />
+                <label>Do</label>
+                <input
+                    class="form-control mb-2"
+                    #sprintEndDateInput
+                    type="text"
+                    [value]="sprintVisibleDates.endDate"
+                    autocomplete="off"
+                    placeholder="dd.mm.rrrr"
+                    aria-label="Datum konce sprintu"
+                    (change)="handleSprintVisibleDateChange('endDate', sprintEndDateInput.value)" />
+                <button class="btn btn-primary" [disabled]="selectedProjectId == null" (click)="createSprint()">Vytvořit sprint</button>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card p-3">
+                <h5>Sprint dashboard</h5>
+                @if (dashboard != null) {
+                <div class="d-flex gap-4">
+                    <div><strong>Velocity:</strong> {{ dashboard.velocity }}</div>
+                    <div><strong>User stories:</strong> {{ dashboard.userStories.length }}</div>
+                    <div><strong>Tasky:</strong> {{ dashboard.tasks.length }}</div>
+                </div>
+
+                <div class="card p-3 mt-3">
+                    <h6 class="mb-2">Stav user stories ve sprintu</h6>
+                    <div class="row g-2">
+                        <div class="col-md-4 sprint-status-completed">
+                            <div class="small fw-semibold text-success mb-1">Dokončené ({{ sprintCompletedStories().length }})</div>
+                            @if (sprintCompletedStories().length === 0) {
+                            <div class="small text-muted">Žádné.</div>
+                            } @else {
+                            @for (story of sprintCompletedStories(); track story.id) {
+                            <div class="story-item backlog-story story-item-clickable task-hover-target mb-1"
+                                [class.story-item-selected]="selectedStoryId === story.id"
+                                [style.border-left]="'6px solid ' + story.colorHex"
+                                (click)="onMenuStoryChange(story.id, 'all')"
+                                (keydown.enter)="onMenuStoryChange(story.id, 'all')"
+                                (keydown.space)="onMenuStoryChange(story.id, 'all')"
+                                tabindex="0" role="button"
+                                [attr.aria-label]="'Zobrazit user story #' + story.storyNumber + ' ' + story.title">
+                                <div class="task-hover-popup" role="tooltip">
+                                    <div class="task-hover-popup-title">{{ story.title }}</div>
+                                    <div class="task-hover-popup-row">
+                                        <span class="task-hover-popup-label">Popis</span>
+                                        <span>{{ story.description || 'Není vyplněn.' }}</span>
+                                    </div>
+                                    <div class="task-hover-popup-row">
+                                        <span class="task-hover-popup-label">Stav sprintu</span>
+                                        <span>Dokončená · SP: {{ story.difficulty }} · Tasky: {{ storyCompletedTaskCount(story.id) }}/{{ storyTaskCount(story.id) }}</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center gap-2">
+                                    <div><strong>#{{ story.storyNumber }}</strong> {{ story.title }} <small class="text-muted">(SP: {{ story.difficulty }})</small></div>
+                                    <button type="button" class="btn btn-sm discussion-button"
+                                        [class.discussion-button-unread]="hasUnreadStoryDiscussion(story.id)"
+                                        (click)="openStoryDiscussion(story, $event)"
+                                        [attr.aria-label]="'Otevřít diskusi ke story #' + story.storyNumber">
+                                        <svg class="discussion-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                            <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5h-6.086l-3.707 3.707A1 1 0 0 1 6 19v-3H6.5A2.5 2.5 0 0 1 4 13.5zM6.5 5a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5H7a1 1 0 0 1 1 1v1.586l2.293-2.293A1 1 0 0 1 11 15h6.5a.5.5 0 0 0 .5-.5v-8a.5.5 0 0 0-.5-.5z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="small text-muted">Tasky (story): {{ storyCompletedTaskCount(story.id) }}/{{ storyTaskCount(story.id) }}</div>
+                            </div>
+                            }
+                            }
+                        </div>
+                        <div class="col-md-4 sprint-status-not-started">
+                            <div class="small fw-semibold text-warning mb-1">Rozpracované ({{ sprintInProgressStories().length }})</div>
+                            @if (sprintInProgressStories().length === 0) {
+                            <div class="small text-muted">Žádné.</div>
+                            } @else {
+                            @for (story of sprintInProgressStories(); track story.id) {
+                            <div class="story-item backlog-story story-item-clickable task-hover-target mb-1"
+                                [class.story-item-selected]="selectedStoryId === story.id"
+                                [style.border-left]="'6px solid ' + story.colorHex"
+                                (click)="onMenuStoryChange(story.id, 'all')"
+                                (keydown.enter)="onMenuStoryChange(story.id, 'all')"
+                                (keydown.space)="onMenuStoryChange(story.id, 'all')"
+                                tabindex="0" role="button"
+                                [attr.aria-label]="'Zobrazit user story #' + story.storyNumber + ' ' + story.title">
+                                <div class="task-hover-popup" role="tooltip">
+                                    <div class="task-hover-popup-title">{{ story.title }}</div>
+                                    <div class="task-hover-popup-row">
+                                        <span class="task-hover-popup-label">Popis</span>
+                                        <span>{{ story.description || 'Není vyplněn.' }}</span>
+                                    </div>
+                                    <div class="task-hover-popup-row">
+                                        <span class="task-hover-popup-label">Stav sprintu</span>
+                                        <span>Rozpracovaná · SP: {{ story.difficulty }} · Tasky: {{ storyCompletedTaskCount(story.id) }}/{{ storyTaskCount(story.id) }}</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center gap-2">
+                                    <div><strong>#{{ story.storyNumber }}</strong> {{ story.title }} <small class="text-muted">(SP: {{ story.difficulty }})</small></div>
+                                    <button type="button" class="btn btn-sm discussion-button"
+                                        [class.discussion-button-unread]="hasUnreadStoryDiscussion(story.id)"
+                                        (click)="openStoryDiscussion(story, $event)"
+                                        [attr.aria-label]="'Otevřít diskusi ke story #' + story.storyNumber">
+                                        <svg class="discussion-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                            <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5h-6.086l-3.707 3.707A1 1 0 0 1 6 19v-3H6.5A2.5 2.5 0 0 1 4 13.5zM6.5 5a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5H7a1 1 0 0 1 1 1v1.586l2.293-2.293A1 1 0 0 1 11 15h6.5a.5.5 0 0 0 .5-.5v-8a.5.5 0 0 0-.5-.5z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="small text-muted">Tasky (story): {{ storyCompletedTaskCount(story.id) }}/{{ storyTaskCount(story.id) }}</div>
+                            </div>
+                            }
+                            }
+                        </div>
+                        <div class="col-md-4">
+                            <div class="small fw-semibold text-secondary mb-1">Nezahájené ({{ sprintNotStartedStories().length }})</div>
+                            @if (sprintNotStartedStories().length === 0) {
+                            <div class="small text-muted">Žádné.</div>
+                            } @else {
+                            @for (story of sprintNotStartedStories(); track story.id) {
+                            <div class="story-item backlog-story story-item-clickable task-hover-target mb-1"
+                                [class.story-item-selected]="selectedStoryId === story.id"
+                                [style.border-left]="'6px solid ' + story.colorHex"
+                                (click)="onMenuStoryChange(story.id, 'all')"
+                                (keydown.enter)="onMenuStoryChange(story.id, 'all')"
+                                (keydown.space)="onMenuStoryChange(story.id, 'all')"
+                                tabindex="0" role="button"
+                                [attr.aria-label]="'Zobrazit user story #' + story.storyNumber + ' ' + story.title">
+                                <div class="task-hover-popup" role="tooltip">
+                                    <div class="task-hover-popup-title">{{ story.title }}</div>
+                                    <div class="task-hover-popup-row">
+                                        <span class="task-hover-popup-label">Popis</span>
+                                        <span>{{ story.description || 'Není vyplněn.' }}</span>
+                                    </div>
+                                    <div class="task-hover-popup-row">
+                                        <span class="task-hover-popup-label">Stav sprintu</span>
+                                        <span>Nezahájená · SP: {{ story.difficulty }} · Tasky: {{ storyCompletedTaskCount(story.id) }}/{{ storyTaskCount(story.id) }}</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center gap-2">
+                                    <div><strong>#{{ story.storyNumber }}</strong> {{ story.title }} <small class="text-muted">(SP: {{ story.difficulty }})</small></div>
+                                    <button type="button" class="btn btn-sm discussion-button"
+                                        [class.discussion-button-unread]="hasUnreadStoryDiscussion(story.id)"
+                                        (click)="openStoryDiscussion(story, $event)"
+                                        [attr.aria-label]="'Otevřít diskusi ke story #' + story.storyNumber">
+                                        <svg class="discussion-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                            <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5h-6.086l-3.707 3.707A1 1 0 0 1 6 19v-3H6.5A2.5 2.5 0 0 1 4 13.5zM6.5 5a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5H7a1 1 0 0 1 1 1v1.586l2.293-2.293A1 1 0 0 1 11 15h6.5a.5.5 0 0 0 .5-.5v-8a.5.5 0 0 0-.5-.5z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="small text-muted">Tasky (story): {{ storyCompletedTaskCount(story.id) }}/{{ storyTaskCount(story.id) }}</div>
+                            </div>
+                            }
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card p-3 mt-3">
+                    <h6 class="mb-2">Burndown chart</h6>
+                    @if (dashboard.burnoutChart.length === 0) {
+                    <p>Pro vybraný sprint ještě nejsou data.</p>
+                    } @else {
+                    <div class="burnout-axis-caption">
+                        <span>Osa X: dny sprintu 1–{{ burnoutDayCount(dashboard.burnoutChart) }}</span>
+                        <span>Osa Y: součet story pointů sprintu (0–{{ burnoutTotalStoryPoints(dashboard.burnoutChart) }} SP)</span>
+                    </div>
+                    <div class="burnout-legend">
+                        <span class="legend-item"><span class="legend-dot remaining"></span>Aktuální stav</span>
+                        <span class="legend-item"><span class="legend-dot ideal"></span>Ideální průběh</span>
+                    </div>
+                    <div class="burnout-graph-wrap">
+                    <svg class="burnout-graph" [attr.viewBox]="'0 0 ' + burnoutSvgWidth + ' ' + burnoutSvgHeight" preserveAspectRatio="none" role="img" aria-label="Burndown graf sprintu se dny sprintu a zbývajícími story pointy" (mousemove)="onBurnoutMouseMove($event, dashboard.burnoutChart)" (mouseleave)="clearBurnoutHover()">
+                        @for (y of burnoutYGrid(dashboard.burnoutChart); track y) {
+                        <line class="grid-line" [attr.x1]="burnoutPadding.left" [attr.y1]="y" [attr.x2]="burnoutSvgWidth - burnoutPadding.right" [attr.y2]="y"></line>
+                        <line class="axis-tick" [attr.x1]="burnoutPadding.left - 6" [attr.y1]="y" [attr.x2]="burnoutPadding.left" [attr.y2]="y"></line>
+                        <text class="axis-label" [attr.x]="22" [attr.y]="y + 4">{{ burnoutYValue(y, dashboard.burnoutChart) }}</text>
+                        }
+
+                        @for (point of burnoutSeries(dashboard.burnoutChart); track point.key) {
+                        @if (point.showOnXAxis) {
+                        <line class="grid-line x-grid" [class.x-grid-today]="isBurnoutToday(point.date)" [attr.x1]="point.x" [attr.y1]="burnoutPadding.top" [attr.x2]="point.x" [attr.y2]="burnoutSvgHeight - burnoutPadding.bottom"></line>
+                        <line class="axis-tick" [class.axis-tick-today]="isBurnoutToday(point.date)" [attr.x1]="point.x" [attr.y1]="burnoutSvgHeight - burnoutPadding.bottom" [attr.x2]="point.x" [attr.y2]="burnoutSvgHeight - burnoutPadding.bottom + 6"></line>
+                        }
+                        }
+
+                        @if (burnoutHover != null) {
+                        <line class="burnout-hover-line" [attr.x1]="burnoutHover.x" [attr.y1]="burnoutPadding.top" [attr.x2]="burnoutHover.x" [attr.y2]="burnoutSvgHeight - burnoutPadding.bottom"></line>
+                        }
+
+                        <line class="axis-line" [attr.x1]="burnoutPadding.left" [attr.y1]="burnoutPadding.top" [attr.x2]="burnoutPadding.left" [attr.y2]="burnoutSvgHeight - burnoutPadding.bottom"></line>
+                        <line class="axis-line" [attr.x1]="burnoutPadding.left" [attr.y1]="burnoutSvgHeight - burnoutPadding.bottom" [attr.x2]="burnoutSvgWidth - burnoutPadding.right" [attr.y2]="burnoutSvgHeight - burnoutPadding.bottom"></line>
+                        <text class="axis-title-y" [attr.x]="16" [attr.y]="burnoutSvgHeight / 2" [attr.transform]="'rotate(-90 16 ' + (burnoutSvgHeight / 2) + ')'">Story points</text>
+
+                        <path class="line remaining" [attr.d]="burnoutPath(dashboard.burnoutChart, 'remaining')"></path>
+                        <path class="line ideal" [attr.d]="idealBurnoutPath(dashboard.burnoutChart)"></path>
+
+                        @for (segment of burnoutLineSegments(dashboard.burnoutChart, 'remaining'); track segment.key) {
+                        <line class="line-hitbox"
+                            [attr.x1]="segment.x1"
+                            [attr.y1]="segment.y1"
+                            [attr.x2]="segment.x2"
+                            [attr.y2]="segment.y2">
+                            <title>{{ segment.tooltip }}</title>
+                        </line>
+                        }
+
+                        @for (point of burnoutSeries(dashboard.burnoutChart); track point.date) {
+                        <circle class="point remaining" [class.point-today]="isBurnoutToday(point.date)" [attr.cx]="point.x" [attr.cy]="point.yRemaining" [attr.r]="isBurnoutToday(point.date) ? 4 : 3">
+                            <title>{{ point.tooltip }}</title>
+                        </circle>
+                        }
+                    </svg>
+
+                    @if (burnoutHover != null) {
+                    <div class="burnout-hover-popup" [style.left.%]="burnoutHover.popupLeftPercent">
+                        <div class="burnout-hover-date">{{ formatDate(burnoutHover.date) }}</div>
+                        <div class="burnout-hover-columns">
+                            <div class="burnout-hover-column">
+                                <div class="burnout-hover-title completed">Dokončené ({{ burnoutHover.completedStories.length }})</div>
+                                @if (burnoutHover.completedStories.length === 0) {
+                                <div class="burnout-hover-empty">Žádné</div>
+                                } @else {
+                                <ul class="burnout-hover-list">
+                                    @for (story of burnoutHover.completedStories; track story) {
+                                    <li>{{ story }}</li>
+                                    }
+                                </ul>
+                                }
+                            </div>
+                            <div class="burnout-hover-column">
+                                <div class="burnout-hover-title incomplete">Nedokončené ({{ burnoutHover.incompleteStories.length }})</div>
+                                @if (burnoutHover.incompleteStories.length === 0) {
+                                <div class="burnout-hover-empty">Žádné</div>
+                                } @else {
+                                <ul class="burnout-hover-list">
+                                    @for (story of burnoutHover.incompleteStories; track story) {
+                                    <li>{{ story }}</li>
+                                    }
+                                </ul>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    }
+                    </div>
+
+                    <div class="x-axis-dates">
+                        @for (label of burnoutDateLabels(dashboard.burnoutChart); track label.key) {
+                        <span class="axis-day-label" [style.left.%]="label.leftPercent"
+                            [class.axis-label-start]="label.align === 'start'"
+                            [class.axis-label-end]="label.align === 'end'"
+                            [class.axis-day-label-today]="isBurnoutToday(label.date)">
+                            <span class="axis-day-number">Den {{ label.text }}</span>
+                            <span class="axis-day-date">{{ label.dayMonth }}</span>
+                        </span>
+                        }
+                        <span class="axis-title-x">dny sprintu</span>
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+        </div>
+    </div>
+    }
+
+    @if (activeTopMenu === 'my-tasks') {
+    <div class="card p-3 mb-3">
+        <h5>Můj přehled nedokončených tasků</h5>
+        @if (currentUser == null) {
+        <p class="mb-0">Nejdřív se přihlas.</p>
+        } @else if (selectedProjectId == null) {
+        <p class="mb-0">Nejdřív vyber projekt.</p>
+        } @else if (myTasksLoading) {
+        <p class="mb-0">Načítám tvoje tasky ze všech sprintů projektu...</p>
+        } @else if (myTasks().length === 0) {
+        <p class="mb-0">Nemáš přiřazené žádné nedokončené tasky.</p>
+        } @else {
+        @for (task of myTasks(); track task.id) {
+        <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded"
+            [style.border]="'1px solid #000'"
+            [style.background]="myTaskStoryById(task.storyId)?.colorHex ?? '#FFF8DC'">
+            <div class="flex-grow-1 story-item-clickable"
+                (click)="openMyTask(task)"
+                (keydown.enter)="openMyTask(task)"
+                (keydown.space)="$event.preventDefault(); openMyTask(task)"
+                tabindex="0" role="button"
+                [attr.aria-label]="'Otevřít task #' + task.taskNumber + ' ve sprintu'">
+                <div><strong>Název tasku:</strong> #{{ task.taskNumber }} - {{ task.title }}</div>
+                <div><strong>Zadání tasku:</strong> {{ task.description || 'Není vyplněno.' }}</div>
+                <div><strong>Definice splnění:</strong> {{ task.definitionOfDone || 'Není vyplněno.' }}</div>
+                <div class="small">Story #{{ storyDisplayNumber(task.storyId) }} · Sprint #{{ myTaskSprintDisplayNumber(task.id) }} · {{ task.status }}</div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-sm discussion-button task-discussion-button"
+                    [class.discussion-button-unread]="hasUnreadTaskDiscussion(task.id)"
+                    (click)="openTaskDiscussion(task, $event)"
+                    [attr.aria-label]="'Otevřít diskusi k tasku #' + task.taskNumber">
+                    <svg class="discussion-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5h-6.086l-3.707 3.707A1 1 0 0 1 6 19v-3H6.5A2.5 2.5 0 0 1 4 13.5zM6.5 5a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5H7a1 1 0 0 1 1 1v1.586l2.293-2.293A1 1 0 0 1 11 15h6.5a.5.5 0 0 0 .5-.5v-8a.5.5 0 0 0-.5-.5z" />
+                    </svg>
+                </button>
+                <button class="btn btn-sm btn-outline-primary" (click)="openMyTask(task); $event.stopPropagation()">Otevřít</button>
+            </div>
+        </div>
+        }
+        }
+    </div>
+    }
+
+    @if (selectedProjectId != null) {
+    @if (activeTopMenu === 'stories') {
+    <div class="card p-3 mb-3">
+        <h5>Nová User Story</h5>
+        <div class="row g-2">
+            <div class="col-md-5">
+                <input class="form-control" placeholder="Název User Story" [(ngModel)]="storyForm.title" />
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" [(ngModel)]="storyForm.difficulty">
+                    @for (point of allowedStoryPoints; track point) {
+                    <option [ngValue]="point">Obtížnost: {{ point }}</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="color" class="form-control form-control-color" [(ngModel)]="storyForm.colorHex" />
+            </div>
+            <div class="col-md-2 d-grid">
+                <button class="btn btn-primary" (click)="createStory()">Vytvoř User Story</button>
+            </div>
+        </div>
+        <textarea class="form-control mt-2" rows="2" placeholder="Popis User Story" [(ngModel)]="storyForm.description"></textarea>
+    </div>
+
+    <div class="row g-3 mb-3 stories-panels-row">
+        <div class="col-md-6 d-flex">
+            <div class="card p-3 backlog-drop-zone stories-panel w-100" [class.drop-active]="backlogStoryDropActive"
+                (dragenter)="onBacklogStoryDragOver($event)" (dragover)="onBacklogStoryDragOver($event)"
+                (dragleave)="onBacklogStoryDragLeave($event)" (drop)="onBacklogStoryDrop($event)">
+                <h5>Product backlog</h5>
+                <div class="small text-muted mb-2">
+                    Backlog obsahuje funkce systému. Funkci můžeš přetáhnout do sprintu nebo ji smazat.
+                </div>
+
+                @if (backlogStories.length === 0) {
+                <p class="mb-0">Backlog je zatím prázdný.</p>
+                } @else {
+                @for (story of backlogStories; track story.id) {
+                <div class="story-item backlog-story task-hover-target d-flex justify-content-between align-items-center gap-2" draggable="true"
+                    [class.story-item-selected]="draggingStoryId === story.id"
+                    [style.border-left]="'6px solid ' + story.colorHex"
+                    (dragstart)="onBacklogStoryDragStart($event, story, 'backlog')" (dragend)="onBacklogStoryDragEnd()">
+                    <div class="task-hover-popup" role="tooltip">
+                        <div class="task-hover-popup-title">{{ story.title }}</div>
+                        <div class="task-hover-popup-row">
+                            <span class="task-hover-popup-label">Popis</span>
+                            <span>{{ story.description || 'Není vyplněn.' }}</span>
+                        </div>
+                        <div class="task-hover-popup-row">
+                            <span class="task-hover-popup-label">Umístění</span>
+                            <span>Product backlog · SP: {{ story.difficulty }} · Tasky: {{ storyCompletedTaskCount(story.id) }}/{{ storyTaskCount(story.id) }}</span>
+                        </div>
+                    </div>
+                    <div class="ps-2 flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center gap-2">
+                            <div><strong>#{{ story.storyNumber }}</strong> {{ story.title }}</div>
+                            <button type="button" class="btn btn-sm discussion-button"
+                                [class.discussion-button-unread]="hasUnreadStoryDiscussion(story.id)"
+                                (click)="openStoryDiscussion(story, $event)">
+                                <svg class="discussion-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5h-6.086l-3.707 3.707A1 1 0 0 1 6 19v-3H6.5A2.5 2.5 0 0 1 4 13.5zM6.5 5a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5H7a1 1 0 0 1 1 1v1.586l2.293-2.293A1 1 0 0 1 11 15h6.5a.5.5 0 0 0 .5-.5v-8a.5.5 0 0 0-.5-.5z" />
+                                </svg>
+                            </button>
+                        </div>
+                        <small>Obtížnost: {{ story.difficulty }} · Tasky: {{ storyCompletedTaskCount(story.id) }}/{{ storyTaskCount(story.id) }}</small>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-secondary" (click)="openStoryEditDialog(story)">Upravit</button>
+                        <button class="btn btn-sm btn-outline-danger" (click)="deleteBacklogStory(story)">Smazat</button>
+                    </div>
+                </div>
+                }
+                }
+            </div>
+        </div>
+
+        <div class="col-md-6 d-flex">
+            <div class="card p-3 planning-drop-zone stories-panel w-100" [class.drop-active]="sprintStoryDropActive"
+                (dragenter)="onSprintStoryDragOver($event)" (dragover)="onSprintStoryDragOver($event)"
+                (dragleave)="onSprintStoryDragLeave($event)" (drop)="onSprintStoryDrop($event)">
+                <h5>Sprint content</h5>
+                @if (selectedSprintId == null) {
+                <div class="small text-muted">Nejdřív vyber sprint nahoře. Potom sem přetahuj funkce z product backlogu.</div>
+                } @else {
+                <div class="small mb-2">
+                    Sprint <strong>#{{ selectedSprintDisplayNumber() }}</strong>. Přetáhni sem funkci z backlogu. Pro odebrání ji přetáhni zpět doleva.
+                </div>
+                @if (dashboard == null || dashboard.userStories.length === 0) {
+                <div class="small text-muted">Ve sprintu zatím nejsou žádné funkce.</div>
+                } @else {
+                @for (story of dashboard.userStories; track story.id) {
+                <div class="story-item backlog-story story-item-clickable task-hover-target d-flex justify-content-between align-items-center" draggable="true"
+                    [class.story-item-selected]="selectedStoryId === story.id || draggingStoryId === story.id"
+                    [style.border-left]="'6px solid ' + story.colorHex"
+                    (dragstart)="onBacklogStoryDragStart($event, story, 'sprint')" (dragend)="onBacklogStoryDragEnd()"
+                    (click)="onMenuStoryChange(story.id, 'all')"
+                    (keydown.enter)="onMenuStoryChange(story.id, 'all')"
+                    (keydown.space)="onMenuStoryChange(story.id, 'all')"
+                    tabindex="0" role="button"
+                    [attr.aria-label]="'Zobrazit tasky pro story #' + story.storyNumber + ' ' + story.title">
+                    <div class="task-hover-popup" role="tooltip">
+                        <div class="task-hover-popup-title">{{ story.title }}</div>
+                        <div class="task-hover-popup-row">
+                            <span class="task-hover-popup-label">Popis</span>
+                            <span>{{ story.description || 'Není vyplněn.' }}</span>
+                        </div>
+                        <div class="task-hover-popup-row">
+                            <span class="task-hover-popup-label">Umístění</span>
+                            <span>Sprint #{{ selectedSprintDisplayNumber() }} · SP: {{ story.difficulty }} · Tasky: {{ storyCompletedTaskCount(story.id) }}/{{ storyTaskCount(story.id) }}</span>
+                        </div>
+                    </div>
+                    <div class="ps-2 flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center gap-2">
+                            <div><strong>#{{ story.storyNumber }}</strong> {{ story.title }}</div>
+                            <button type="button" class="btn btn-sm discussion-button"
+                                [class.discussion-button-unread]="hasUnreadStoryDiscussion(story.id)"
+                                (click)="openStoryDiscussion(story, $event)">
+                                <svg class="discussion-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5h-6.086l-3.707 3.707A1 1 0 0 1 6 19v-3H6.5A2.5 2.5 0 0 1 4 13.5zM6.5 5a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5H7a1 1 0 0 1 1 1v1.586l2.293-2.293A1 1 0 0 1 11 15h6.5a.5.5 0 0 0 .5-.5v-8a.5.5 0 0 0-.5-.5z" />
+                                </svg>
+                            </button>
+                        </div>
+                        <small>Obtížnost: {{ story.difficulty }}</small>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-secondary" (click)="openStoryEditDialog(story); $event.stopPropagation()">Upravit</button>
+                        <button class="btn btn-sm btn-outline-primary" (click)="onMenuStoryChange(story.id, 'all'); $event.stopPropagation()">Zobrazit tasky</button>
+                    </div>
+                </div>
+                }
+                }
+                }
+            </div>
+        </div>
+    </div>
+    }
+
+    @if (activeTopMenu === 'tasks') {
+    @if (dashboard == null) {
+    <div class="alert alert-info">Pro práci s tasky nejdřív vyber sprint.</div>
+    } @else {
+    @if (selectedStory() == null) {
+    <div class="d-flex gap-2 mb-2">
+        <button class="btn btn-sm btn-outline-secondary" (click)="showMenu('stories')">Zpět na User stories</button>
+        <button class="btn btn-sm btn-outline-secondary" (click)="showMenu('sprints')">Zpět na Sprint</button>
+    </div>
+    <div class="alert alert-info">Nejdřív vyber user story.</div>
+    } @else {
+    <div class="card p-3 mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="mb-0">Tasky pro story #{{ selectedStory()!.storyNumber }} - {{ selectedStory()!.title }} (SP: {{ selectedStory()!.difficulty }})</h5>
+            <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+                <button type="button" class="btn btn-sm discussion-button"
+                    [class.discussion-button-unread]="hasUnreadStoryDiscussion(selectedStory()!.id)"
+                    (click)="openStoryDiscussion(selectedStory()!)"
+                    [attr.aria-label]="'Otevřít diskusi ke story #' + selectedStory()!.storyNumber">
+                    <svg class="discussion-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5h-6.086l-3.707 3.707A1 1 0 0 1 6 19v-3H6.5A2.5 2.5 0 0 1 4 13.5zM6.5 5a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5H7a1 1 0 0 1 1 1v1.586l2.293-2.293A1 1 0 0 1 11 15h6.5a.5.5 0 0 0 .5-.5v-8a.5.5 0 0 0-.5-.5z" />
+                    </svg>
+                </button>
+                <span class="small text-muted">Zobrazit:</span>
+                <div class="btn-group btn-group-sm" role="group" aria-label="Filtr zobrazení tasků">
+                    <button type="button" class="btn" [class.btn-primary]="taskDisplayMode === 'all'" [class.btn-outline-primary]="taskDisplayMode !== 'all'"
+                        (click)="setTaskDisplayMode('all')">Všechny tasky</button>
+                    <button type="button" class="btn" [class.btn-primary]="taskDisplayMode === 'mine'" [class.btn-outline-primary]="taskDisplayMode !== 'mine'"
+                            (click)="setTaskDisplayMode('mine')">Jen moje tasky</button>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary me-2" (click)="showMenu('stories')">Zpět na User stories</button>
+                <button class="btn btn-sm btn-outline-secondary" (click)="showMenu('sprints')">Zpět na Sprint</button>
+            </div>
+        </div>
+    </div>
+    }
+
+    <div #taskFormCard class="card p-3 mb-3">
+        <h5>{{ editingTaskId == null ? 'Nový task' : 'Edituj task' }}</h5>
+        @if (editingTaskId != null) {
+        <div class="alert alert-info py-2 mb-3">V editaci lze měnit název, zadání a definici splnění vybraného tasku.</div>
+        }
+        <div class="row g-2">
+            <div class="col-md-4">
+                <label>User story</label>
+                <select class="form-select" [(ngModel)]="taskForm.storyId" (ngModelChange)="onTaskStoryChange($event)" [disabled]="editingTaskId != null">
+                    <option [ngValue]="0" disabled>Vyber user story</option>
+                    @for (story of dashboard.userStories; track story.id) {
+                    <option [ngValue]="story.id">#{{ story.storyNumber }} - {{ story.title }} (SP: {{ story.difficulty }})</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label>Assignee</label>
+                <select class="form-select" [(ngModel)]="taskForm.assigneeUserId" [disabled]="editingTaskId != null">
+                    <option [ngValue]="''" disabled>Vyber assignee</option>
+                    @for (user of users; track user.id) {
+                    <option [ngValue]="user.id">{{ user.displayName }} ({{ user.username }})</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label>Reviewer</label>
+                <select class="form-select" [(ngModel)]="taskForm.reviewerUserId" [disabled]="editingTaskId != null">
+                    <option [ngValue]="''" disabled>Vyber reviewer</option>
+                    @for (user of users; track user.id) {
+                    <option [ngValue]="user.id">{{ user.displayName }} ({{ user.username }})</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <input class="form-control mt-2" placeholder="Název tasku" [(ngModel)]="taskForm.title" />
+        <textarea class="form-control mt-2" rows="2" placeholder="Zadání úkolu" [(ngModel)]="taskForm.description"></textarea>
+        <textarea class="form-control mt-2 mb-3" rows="2" placeholder="Definice splnění" [(ngModel)]="taskForm.definitionOfDone"></textarea>
+        <div class="row mt-2">
+            <div class="col-md-12">
+                <button class="btn btn-primary" (click)="submitTaskForm()">{{ editingTaskId == null ? 'Vytvořit task' : 'Uložit změny' }}</button>
+                @if (editingTaskId != null) {
+                <button class="btn btn-outline-secondary ms-2" type="button" (click)="cancelTaskEdit()">Zrušit editaci</button>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="card p-3 mb-3">
+        <h5>Zadání tasku</h5>
+        @if (tasksForSelectedStory().length === 0) {
+        <p class="mb-0">{{ taskDisplayMode === 'all' ? 'Pro vybranou user story zatím nejsou žádné tasky.' : 'Pro vybranou user story zatím nemáš žádné tasky.' }}</p>
+        } @else {
+        @for (task of tasksForSelectedStory(); track task.id) {
+        <div class="task-card mb-2 task-hover-target" [style.background]="storyById(task.storyId)?.colorHex ?? task.colorHex">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div><strong>Název tasku:</strong> {{ task.title }}</div>
+                    <div><strong>Zadání tasku:</strong> {{ task.description || 'Není vyplněno.' }}</div>
+                    <div><strong>Definice splnění:</strong> {{ task.definitionOfDone || 'Není vyplněno.' }}</div>
+                    <div class="small">Zadavatel: {{ task.creatorDisplayName }} | Assignee: {{ task.assigneeDisplayName }} | Reviewer: {{ task.reviewerDisplayName }}</div>
+                    @if (task.reviewComment) {
+                    <div class="small text-danger">Review: {{ task.reviewComment }}</div>
+                    }
+                </div>
+                <div class="task-actions d-flex flex-column align-items-end gap-1">
+                    <button type="button" class="btn btn-sm discussion-button task-discussion-button align-self-end"
+                        [class.discussion-button-unread]="hasUnreadTaskDiscussion(task.id)"
+                        (click)="openTaskDiscussion(task, $event)"
+                        [attr.aria-label]="'Otevřít diskusi k tasku #' + task.taskNumber">
+                        <svg class="discussion-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5h-6.086l-3.707 3.707A1 1 0 0 1 6 19v-3H6.5A2.5 2.5 0 0 1 4 13.5zM6.5 5a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5H7a1 1 0 0 1 1 1v1.586l2.293-2.293A1 1 0 0 1 11 15h6.5a.5.5 0 0 0 .5-.5v-8a.5.5 0 0 0-.5-.5z" />
+                        </svg>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" [disabled]="!canEditTask(task)" (click)="editTask(task)">Upravit</button>
+                    <select class="form-select form-select-sm" [ngModel]="task.status" (ngModelChange)="updateTaskStatus(task, $event)">
+                        @for (status of statuses; track status) {
+                        <option [ngValue]="status">{{ status }}</option>
+                        }
+                    </select>
+                    <button class="btn btn-sm btn-outline-danger mt-1" (click)="returnTask(task)">Vrátit tvůrci</button>
+                </div>
+            </div>
+        </div>
+        }
+        }
+    </div>
+
+    <div class="card p-3 mt-3">
+        <h5>Přehled tásků</h5>
+        <div class="task-management-board">
+            <div class="task-management-column" [class.drop-active]="dragOverStatus === 'TODO'"
+                (dragenter)="onStatusDragOver($event, 'TODO')" (dragover)="onStatusDragOver($event, 'TODO')" (dragleave)="onStatusDragLeave($event)"
+                (drop)="onStatusDrop($event, 'TODO')">
+                <div class="task-management-column-header todo">Nedotčené (TODO) · {{ untouchedTasks().length }}</div>
+                @for (task of untouchedTasks(); track task.id) {
+                <div class="task-management-postcard task-hover-target" [style.background]="storyById(task.storyId)?.colorHex ?? task.colorHex" draggable="true"
+                    [class.dragging]="draggingTaskId === task.id" (dragstart)="onTaskDragStart($event, task)"
+                    (dragend)="onTaskDragEnd()">
+                    <div class="task-hover-popup" role="tooltip">
+                        <div class="task-hover-popup-title">{{ task.title }}</div>
+                        <div class="task-hover-popup-row">
+                            <span class="task-hover-popup-label">Zadání úkolu</span>
+                            <span>{{ task.description || 'Není vyplněno.' }}</span>
+                        </div>
+                        <div class="task-hover-popup-row">
+                            <span class="task-hover-popup-label">Definice splnění</span>
+                            <span>{{ task.definitionOfDone || 'Není vyplněno.' }}</span>
+                        </div>
+                    </div>
+                    <div class="task-management-postcard-key">#{{ task.taskNumber }}</div>
+                    <div class="task-management-postcard-title">{{ task.title }}</div>
+                    <div class="task-management-postcard-meta d-flex justify-content-between align-items-center gap-2">
+                        <span>Story #{{ storyDisplayNumber(task.storyId) }} · {{ task.assigneeDisplayName }}</span>
+                        <button type="button" class="btn btn-sm discussion-button task-discussion-button"
+                            [class.discussion-button-unread]="hasUnreadTaskDiscussion(task.id)"
+                            (click)="openTaskDiscussion(task, $event)"
+                            [attr.aria-label]="'Otevřít diskusi k tasku #' + task.taskNumber">
+                            <svg class="discussion-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5h-6.086l-3.707 3.707A1 1 0 0 1 6 19v-3H6.5A2.5 2.5 0 0 1 4 13.5zM6.5 5a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5H7a1 1 0 0 1 1 1v1.586l2.293-2.293A1 1 0 0 1 11 15h6.5a.5.5 0 0 0 .5-.5v-8a.5.5 0 0 0-.5-.5z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                }
+            </div>
+
+            <div class="task-management-column" [class.drop-active]="dragOverStatus === 'IN_PROGRESS'"
+                (dragenter)="onStatusDragOver($event, 'IN_PROGRESS')" (dragover)="onStatusDragOver($event, 'IN_PROGRESS')" (dragleave)="onStatusDragLeave($event)"
+                (drop)="onStatusDrop($event, 'IN_PROGRESS')">
+                <div class="task-management-column-header progress">Rozpracované · {{ inProgressTasks().length }}</div>
+                @for (task of inProgressTasks(); track task.id) {
+                <div class="task-management-postcard task-hover-target" [style.background]="storyById(task.storyId)?.colorHex ?? task.colorHex" draggable="true"
+                    [class.dragging]="draggingTaskId === task.id" (dragstart)="onTaskDragStart($event, task)"
+                    (dragend)="onTaskDragEnd()">
+                    <div class="task-hover-popup" role="tooltip">
+                        <div class="task-hover-popup-title">{{ task.title }}</div>
+                        <div class="task-hover-popup-row">
+                            <span class="task-hover-popup-label">Zadání úkolu</span>
+                            <span>{{ task.description || 'Není vyplněno.' }}</span>
+                        </div>
+                        <div class="task-hover-popup-row">
+                            <span class="task-hover-popup-label">Definice splnění</span>
+                            <span>{{ task.definitionOfDone || 'Není vyplněno.' }}</span>
+                        </div>
+                    </div>
+                    <div class="task-management-postcard-key">#{{ task.taskNumber }}</div>
+                    <div class="task-management-postcard-title">{{ task.title }}</div>
+                    <div class="task-management-postcard-meta d-flex justify-content-between align-items-center gap-2">
+                        <span>{{ task.status }} · {{ task.assigneeDisplayName }}</span>
+                        <button type="button" class="btn btn-sm discussion-button task-discussion-button"
+                            [class.discussion-button-unread]="hasUnreadTaskDiscussion(task.id)"
+                            (click)="openTaskDiscussion(task, $event)"
+                            [attr.aria-label]="'Otevřít diskusi k tasku #' + task.taskNumber">
+                            <svg class="discussion-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5h-6.086l-3.707 3.707A1 1 0 0 1 6 19v-3H6.5A2.5 2.5 0 0 1 4 13.5zM6.5 5a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5H7a1 1 0 0 1 1 1v1.586l2.293-2.293A1 1 0 0 1 11 15h6.5a.5.5 0 0 0 .5-.5v-8a.5.5 0 0 0-.5-.5z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                }
+            </div>
+
+            <div class="task-management-column" [class.drop-active]="dragOverStatus === 'IN_REVIEW'"
+                (dragenter)="onStatusDragOver($event, 'IN_REVIEW')" (dragover)="onStatusDragOver($event, 'IN_REVIEW')" (dragleave)="onStatusDragLeave($event)"
+                (drop)="onStatusDrop($event, 'IN_REVIEW')">
+                <div class="task-management-column-header review">Kontrola tasků · {{ controlTasks().length }}</div>
+                @for (task of controlTasks(); track task.id) {
+                <div class="task-management-postcard task-hover-target" [style.background]="storyById(task.storyId)?.colorHex ?? task.colorHex" draggable="true"
+                    [class.dragging]="draggingTaskId === task.id" (dragstart)="onTaskDragStart($event, task)"
+                    (dragend)="onTaskDragEnd()">
+                    <div class="task-hover-popup" role="tooltip">
+                        <div class="task-hover-popup-title">{{ task.title }}</div>
+                        <div class="task-hover-popup-row">
+                            <span class="task-hover-popup-label">Zadání úkolu</span>
+                            <span>{{ task.description || 'Není vyplněno.' }}</span>
+                        </div>
+                        <div class="task-hover-popup-row">
+                            <span class="task-hover-popup-label">Definice splnění</span>
+                            <span>{{ task.definitionOfDone || 'Není vyplněno.' }}</span>
+                        </div>
+                    </div>
+                    <div class="task-management-postcard-key">#{{ task.taskNumber }}</div>
+                    <div class="task-management-postcard-title">{{ task.title }}</div>
+                    <div class="task-management-postcard-meta d-flex justify-content-between align-items-center gap-2">
+                        <span>{{ task.status }} · {{ task.assigneeDisplayName }}</span>
+                        <button type="button" class="btn btn-sm discussion-button task-discussion-button"
+                            [class.discussion-button-unread]="hasUnreadTaskDiscussion(task.id)"
+                            (click)="openTaskDiscussion(task, $event)"
+                            [attr.aria-label]="'Otevřít diskusi k tasku #' + task.taskNumber">
+                            <svg class="discussion-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5h-6.086l-3.707 3.707A1 1 0 0 1 6 19v-3H6.5A2.5 2.5 0 0 1 4 13.5zM6.5 5a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5H7a1 1 0 0 1 1 1v1.586l2.293-2.293A1 1 0 0 1 11 15h6.5a.5.5 0 0 0 .5-.5v-8a.5.5 0 0 0-.5-.5z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                }
+            </div>
+
+            <div class="task-management-column" [class.drop-active]="dragOverStatus === 'DONE'"
+                (dragenter)="onStatusDragOver($event, 'DONE')" (dragover)="onStatusDragOver($event, 'DONE')" (dragleave)="onStatusDragLeave($event)"
+                (drop)="onStatusDrop($event, 'DONE')">
+                <div class="task-management-column-header done">Dokončené · {{ doneTasks().length }}</div>
+                @for (task of doneTasks(); track task.id) {
+                <div class="task-management-postcard task-hover-target" [style.background]="storyById(task.storyId)?.colorHex ?? task.colorHex" draggable="true"
+                    [class.dragging]="draggingTaskId === task.id" (dragstart)="onTaskDragStart($event, task)"
+                    (dragend)="onTaskDragEnd()">
+                    <div class="task-hover-popup" role="tooltip">
+                        <div class="task-hover-popup-title">{{ task.title }}</div>
+                        <div class="task-hover-popup-row">
+                            <span class="task-hover-popup-label">Zadání úkolu</span>
+                            <span>{{ task.description || 'Není vyplněno.' }}</span>
+                        </div>
+                        <div class="task-hover-popup-row">
+                            <span class="task-hover-popup-label">Definice splnění</span>
+                            <span>{{ task.definitionOfDone || 'Není vyplněno.' }}</span>
+                        </div>
+                    </div>
+                    <div class="task-management-postcard-key">#{{ task.taskNumber }}</div>
+                    <div class="task-management-postcard-title">{{ task.title }}</div>
+                    <div class="task-management-postcard-meta d-flex justify-content-between align-items-center gap-2">
+                        <span>Dokončeno: {{ formatDateTime(task.completedAt) }}</span>
+                        <button type="button" class="btn btn-sm discussion-button task-discussion-button"
+                            [class.discussion-button-unread]="hasUnreadTaskDiscussion(task.id)"
+                            (click)="openTaskDiscussion(task, $event)"
+                            [attr.aria-label]="'Otevřít diskusi k tasku #' + task.taskNumber">
+                            <svg class="discussion-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5h-6.086l-3.707 3.707A1 1 0 0 1 6 19v-3H6.5A2.5 2.5 0 0 1 4 13.5zM6.5 5a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5H7a1 1 0 0 1 1 1v1.586l2.293-2.293A1 1 0 0 1 11 15h6.5a.5.5 0 0 0 .5-.5v-8a.5.5 0 0 0-.5-.5z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                }
+            </div>
+        </div>
+    </div>
+    }
+    }
+    }
+    }
+</div>
+
+@if (storyEditDialogOpen && editingStory != null) {
+<div class="discussion-modal-backdrop" (click)="closeStoryEditDialog()">
+    <div class="discussion-modal card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true"
+        [attr.aria-label]="'Editace user story ' + editingStory.title">
+        <div class="discussion-modal-header">
+            <div>
+                <h5 class="mb-1">Editace user story #{{ editingStory.storyNumber }} - {{ editingStory.title }}</h5>
+                <div class="small text-muted">Uprav název User Story i její popis v jednom dialogu.</div>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary" (click)="closeStoryEditDialog()">Zavřít</button>
+        </div>
+
+        <div class="discussion-modal-body">
+            <label class="form-label" for="story-edit-title">Název User Story</label>
+            <input id="story-edit-title" class="form-control mb-3" [(ngModel)]="storyEditForm.title" maxlength="255" />
+
+            <label class="form-label" for="story-edit-description">Popis User Story</label>
+            <textarea id="story-edit-description" class="form-control discussion-input" rows="5" [(ngModel)]="storyEditForm.description"></textarea>
+
+            <div class="discussion-composer-actions">
+                <button type="button" class="btn btn-primary" [disabled]="storyEditSubmitting" (click)="submitStoryEdit()">Uložit změny</button>
+                <button type="button" class="btn btn-outline-secondary" [disabled]="storyEditSubmitting" (click)="closeStoryEditDialog()">Zrušit</button>
+            </div>
+        </div>
+    </div>
+</div>
+}
+
+@if (deleteDialog != null) {
+<div class="delete-dialog-backdrop" (click)="closeDeleteDialog()"></div>
+<div class="delete-dialog" role="dialog" aria-modal="true" [attr.aria-labelledby]="'delete-story-dialog-title'">
+    <div class="delete-dialog__card">
+        <h5 id="delete-story-dialog-title" class="mb-2">{{ deleteDialogTitle() }}</h5>
+        <p class="mb-3 text-muted">{{ deleteDialogMessage() }}</p>
+        <div class="delete-dialog__actions">
+            <button type="button" class="btn btn-outline-secondary" [disabled]="deleteDialogSubmitting" (click)="closeDeleteDialog()">
+                Zrušit
+            </button>
+            <button type="button" class="btn btn-danger" [disabled]="deleteDialogSubmitting" (click)="confirmDeleteDialog()">
+                {{ deleteDialogConfirmLabel() }}
+            </button>
+        </div>
+    </div>
+</div>
+}
+
+@if (taskDiscussionDialogOpen && discussionTask != null) {
+<div class="discussion-modal-backdrop" (click)="closeTaskDiscussion()">
+    <div class="discussion-modal card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true"
+        [attr.aria-label]="'Diskuse k tasku ' + discussionTask.title">
+        <div class="discussion-modal-header">
+            <div>
+                <h5 class="mb-1">Diskuse k tasku #{{ discussionTask.taskNumber }} - {{ discussionTask.title }}</h5>
+                <div class="small text-muted">Vlákna odpovědí tvoří strom komunikace mezi uživateli.</div>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary" (click)="closeTaskDiscussion()">Zavřít</button>
+        </div>
+
+        <div class="discussion-modal-body">
+            @if (taskDiscussionErrorMessage !== '') {
+            <div class="alert alert-warning py-2 px-3 mb-3">
+                {{ taskDiscussionErrorMessage }}
+            </div>
+            }
+
+            @if (taskDiscussionReplyTo != null) {
+            <div class="alert alert-info py-2 px-3 mb-3">
+                Odpovídáš na zprávu od <strong>{{ taskDiscussionReplyTo.authorDisplayName }}</strong>.
+                <button type="button" class="btn btn-sm btn-link" (click)="cancelTaskDiscussionReply()">Zrušit odpověď</button>
+            </div>
+            }
+
+            <textarea class="form-control discussion-input" rows="3"
+                [placeholder]="taskDiscussionReplyTo == null ? 'Napiš novou zprávu do 1. úrovně...' : 'Napiš odpověď do vlákna...'"
+                [(ngModel)]="taskDiscussionDraft"></textarea>
+
+            <div class="discussion-composer-actions">
+                <button type="button" class="btn btn-primary" [disabled]="taskDiscussionSubmitting" (click)="submitTaskDiscussionMessage()">
+                    {{ taskDiscussionReplyTo == null ? 'Přidat zprávu' : 'Odpovědět' }}
+                </button>
+                @if (taskDiscussionReplyTo != null) {
+                <button type="button" class="btn btn-outline-secondary" (click)="cancelTaskDiscussionReply()">Psát jako nové téma</button>
+                }
+            </div>
+
+            <div class="discussion-thread mt-3">
+                @if (taskDiscussionLoading) {
+                <div class="text-muted">Načítám diskusi...</div>
+                } @else if (taskDiscussionFlatMessages.length === 0) {
+                <div class="text-muted">Zatím tu nejsou žádné zprávy. Začni nové vlákno.</div>
+                } @else {
+                @for (message of taskDiscussionFlatMessages; track message.id) {
+                <div class="discussion-message"
+                    [class.discussion-message-own]="currentUser != null && message.authorUserId === currentUser.id"
+                    [style.margin-left.px]="message.depth * 28">
+                    <div class="discussion-message-meta">
+                        <strong>{{ discussionAuthorLabel(message) }}</strong>
+                        <span>{{ formatDiscussionDateTime(message.createdAt) }}</span>
+                    </div>
+                    <div class="discussion-message-content">{{ message.content }}</div>
+                    <div class="discussion-message-actions">
+                        <button type="button" class="btn btn-sm btn-link p-0" (click)="replyToTaskDiscussionMessage(message)">Reagovat</button>
+                    </div>
+                </div>
+                }
+                }
+            </div>
+        </div>
+    </div>
+</div>
+}
+
+@if (discussionDialogOpen && discussionStory != null) {
+<div class="discussion-modal-backdrop" (click)="closeStoryDiscussion()">
+    <div class="discussion-modal card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true"
+        [attr.aria-label]="'Diskuse ke story ' + discussionStory.title">
+        <div class="discussion-modal-header">
+            <div>
+                <h5 class="mb-1">Diskuse ke story #{{ discussionStory.storyNumber }} - {{ discussionStory.title }}</h5>
+                <div class="small text-muted">Vlákna odpovědí tvoří strom komunikace mezi uživateli.</div>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary" (click)="closeStoryDiscussion()">Zavřít</button>
+        </div>
+
+        <div class="discussion-modal-body">
+            @if (discussionReplyTo != null) {
+            <div class="alert alert-info py-2 px-3 mb-3">
+                Odpovídáš na zprávu od <strong>{{ discussionReplyTo.authorDisplayName }}</strong>.
+                <button type="button" class="btn btn-sm btn-link" (click)="cancelStoryDiscussionReply()">Zrušit odpověď</button>
+            </div>
+            }
+
+            <textarea class="form-control discussion-input" rows="3"
+                [placeholder]="discussionReplyTo == null ? 'Napiš novou zprávu do 1. úrovně...' : 'Napiš odpověď do vlákna...'"
+                [(ngModel)]="discussionDraft"></textarea>
+
+            <div class="discussion-composer-actions">
+                <button type="button" class="btn btn-primary" [disabled]="discussionSubmitting" (click)="submitStoryDiscussionMessage()">
+                    {{ discussionReplyTo == null ? 'Přidat zprávu' : 'Odpovědět' }}
+                </button>
+                @if (discussionReplyTo != null) {
+                <button type="button" class="btn btn-outline-secondary" (click)="cancelStoryDiscussionReply()">Psát jako nové téma</button>
+                }
+            </div>
+
+            <div class="discussion-thread mt-3">
+                @if (discussionLoading) {
+                <div class="text-muted">Načítám diskusi...</div>
+                } @else if (discussionFlatMessages.length === 0) {
+                <div class="text-muted">Zatím tu nejsou žádné zprávy. Začni nové vlákno.</div>
+                } @else {
+                @for (message of discussionFlatMessages; track message.id) {
+                <div class="discussion-message"
+                    [class.discussion-message-own]="currentUser != null && message.authorUserId === currentUser.id"
+                    [style.margin-left.px]="message.depth * 28">
+                    <div class="discussion-message-meta">
+                        <strong>{{ discussionAuthorLabel(message) }}</strong>
+                        <span>{{ formatDiscussionDateTime(message.createdAt) }}</span>
+                    </div>
+                    <div class="discussion-message-content">{{ message.content }}</div>
+                    <div class="discussion-message-actions">
+                        <button type="button" class="btn btn-sm btn-link p-0" (click)="replyToStoryDiscussionMessage(message)">Reagovat</button>
+                    </div>
+                </div>
+                }
+                }
+            </div>
+        </div>
+    </div>
+</div>
+}

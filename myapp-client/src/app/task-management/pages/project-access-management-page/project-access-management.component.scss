@@ -1,0 +1,126 @@
+.card {
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #000;
+}
+
+.admin-panel-block {
+  border: 1px solid #ddd;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  background: #fafafa;
+}
+
+.admin-user-list,
+.admin-project-list {
+  display: grid;
+  gap: 0.75rem;
+  max-height: clamp(18rem, 42vh, 24rem);
+  overflow-y: auto;
+  padding-right: 0.35rem;
+  scrollbar-width: thin;
+  scrollbar-color: #9aa4b2 transparent;
+}
+
+.admin-user-list::-webkit-scrollbar,
+.admin-project-list::-webkit-scrollbar {
+  width: 0.6rem;
+}
+
+.admin-user-list::-webkit-scrollbar-track,
+.admin-project-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-user-list::-webkit-scrollbar-thumb,
+.admin-project-list::-webkit-scrollbar-thumb {
+  background: #b8c0cc;
+  border-radius: 999px;
+  border: 2px solid #fafafa;
+}
+
+.admin-user-list::-webkit-scrollbar-thumb:hover,
+.admin-project-list::-webkit-scrollbar-thumb:hover {
+  background: #8c97a8;
+}
+
+.admin-user-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  width: 100%;
+  border: 1px solid #d0d0d0;
+  border-radius: 0.75rem;
+  padding: 0.85rem;
+  background: #fff;
+  text-align: left;
+  flex: 1;
+}
+
+.admin-user-item.active {
+  border-color: #111;
+  box-shadow: 0 0 0 2px rgba(17, 17, 17, 0.08);
+}
+
+.admin-user-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.65rem;
+}
+
+.admin-user-delete {
+  align-self: center;
+  min-width: 5.5rem;
+}
+
+.admin-project-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 0.75rem;
+  border: 1px solid #d0d0d0;
+  border-radius: 0.75rem;
+  padding: 0.85rem;
+  background: #fff;
+}
+
+.admin-project-item input {
+  margin-top: 0.3rem;
+}
+
+.admin-note {
+  max-width: 24rem;
+  white-space: normal;
+}
+
+.delete-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  z-index: 1990;
+}
+
+.delete-dialog {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  z-index: 2000;
+}
+
+.delete-dialog__card {
+  width: min(100%, 28rem);
+  border: 1px solid #111;
+  border-radius: 0.9rem;
+  background: #fff;
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.2);
+  padding: 1.25rem;
+}
+
+.delete-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}

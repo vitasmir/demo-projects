@@ -1,0 +1,151 @@
+<div class="employee-tree-header">
+    <h2>{{ title }}</h2>
+    <div class="header-actions">
+        <button mat-button class="btn btn-outline-secondary redo-button" type="button" [disabled]="!canRedo()"
+            (click)="redoLastHierarchyChange()">REDO</button>
+        <button mat-button class="btn btn-warning undo-button" type="button" [disabled]="!canUndo()"
+            (click)="undoLastHierarchyChange()">UNDO</button>
+    </div>
+</div>
+
+<section class="employee-tree-panel source-tree-panel">
+<div class="tree-panel-heading">
+    <h3>Available employees</h3>
+    <span>Select an employee in the upper tree.</span>
+</div>
+
+<div class="employee-search">
+    <input type="search" class="form-control" placeholder="Search employee by name (minimum 3 characters)"
+        [value]="searchInputText" (input)="onSearchInput($event)" (keydown.enter)="searchEmployees()" />
+    <button mat-button class="btn btn-primary" type="button" [disabled]="searchInputText.trim().length < 3"
+        (click)="searchEmployees()">
+        Search
+    </button>
+    <button *ngIf="searchText" mat-button class="btn btn-outline-secondary" type="button" (click)="clearSearch()">
+        Clear
+    </button>
+</div>
+
+<div>
+    <button mat-button class="btn btn-primary" (click)="expandDisplayedTree()">Expand All</button>
+    <button mat-button class="btn btn-primary" (click)="treeControl.collapseAll()">Collapse All</button>
+    <button mat-button class="btn move-toolbar-button" [disabled]="!canMoveToSelectedTarget()"
+        (click)="moveSelectedAsChild(selectedTargetManager!)">
+        Move selected employee to selected manager
+    </button>
+    <button mat-button class="btn move-toolbar-button" [disabled]="!selectedEmployeeHasChildren() || !canMoveToSelectedTarget()"
+        (click)="moveSelectedChildrenTo(selectedTargetManager!)">
+        Move selected employee's subordinates to selected manager
+    </button>
+</div>
+
+<div class="tree-surface upper-tree-surface">
+    <mat-tree [dataSource]="dataSource" [treeControl]="treeControl">
+        <mat-nested-tree-node *matTreeNodeDef="let node">
+            <div class="mat-tree-node employee-tree-node" [class.manager-node]="isManager(node)"
+                [class.selected]="isSelected(node)">
+                <span class="tree-node-spacer"></span>
+                <button type="button" class="employee-node-label" (click)="selectEmployee(node)">
+                    <span class="employee-name">{{node.firstName}} {{node.lastName}}</span>
+                </button>
+                <span class="employee-position">[{{node.position}}]</span>
+            </div>
+        </mat-nested-tree-node>
+        <mat-nested-tree-node *matTreeNodeDef="let node; when: hasChild">
+            <div>
+                <div class="mat-tree-node employee-tree-node" [class.manager-node]="isManager(node)"
+                    [class.selected]="isSelected(node)">
+                    <button mat-icon-button class="tree-node-toggle" [attr.aria-label]="'Toggle ' + node.firstName + ' ' + node.lastName"
+                        (click)="treeControl.toggle(node)">
+                        <span class="tree-node-toggle-symbol">{{ treeControl.isExpanded(node) ? '-' : '+' }}</span>
+                    </button>
+                    <button type="button" class="employee-node-label" (click)="selectEmployee(node)">
+                        <span class="employee-name">{{node.firstName}} {{node.lastName}}</span>
+                    </button>
+                    <span class="employee-position">[{{node.position}}]</span>
+                </div>
+                <ul [class.example-tree-invisible]="!treeControl.isExpanded(node)">
+                    <ng-container matTreeNodeOutlet></ng-container>
+                </ul>
+            </div>
+        </mat-nested-tree-node>
+    </mat-tree>
+</div>
+</section>
+
+<section class="employee-tree-panel destination-tree-panel">
+    <div class="tree-panel-heading">
+        <h3>Target manager</h3>
+        <span>Select a manager in the lower tree.</span>
+    </div>
+    <div class="employee-search">
+        <input type="search" class="form-control" placeholder="Search employee by name (minimum 3 characters)"
+            [value]="lowerSearchInputText" (input)="onLowerSearchInput($event)" (keydown.enter)="searchLowerEmployees()" />
+        <button mat-button class="btn btn-primary" type="button" [disabled]="lowerSearchInputText.trim().length < 3"
+            (click)="searchLowerEmployees()">
+            Search
+        </button>
+        <button *ngIf="lowerSearchText" mat-button class="btn btn-outline-secondary" type="button" (click)="clearLowerSearch()">
+            Clear
+        </button>
+    </div>
+    <div>
+        <button mat-button class="btn btn-primary" (click)="expandLowerTree()">Expand All</button>
+        <button mat-button class="btn btn-primary" (click)="lowerTreeControl.collapseAll()">Collapse All</button>
+    </div>
+
+    <div class="lower-tree-surface">
+    <mat-tree [dataSource]="lowerDataSource" [treeControl]="lowerTreeControl">
+        <mat-nested-tree-node *matTreeNodeDef="let node">
+            <div class="mat-tree-node employee-tree-node lower-tree-node"
+                [class.selected-target-manager]="isTargetManager(node)"
+                [class.lower-search-match]="isLowerSearchMatch(node)">
+                <span class="tree-node-spacer"></span>
+                <button type="button" class="employee-node-label" [disabled]="!isManager(node)" (click)="selectTargetManager(node)">
+                    <span class="employee-name">{{ node.firstName }} {{ node.lastName }}</span>
+                </button>
+                <span class="employee-position">[{{ node.position }}]</span>
+                <div class="move-actions" *ngIf="selectedEmployee && canMoveToManager(node)">
+                    <button mat-button class="btn btn-sm btn-outline-primary move-action" (click)="moveSelectedAsChild(node)">
+                        Move employee
+                    </button>
+                    <button *ngIf="selectedEmployeeHasChildren()" mat-button class="btn btn-sm btn-outline-primary move-action"
+                        (click)="moveSelectedChildrenTo(node)">
+                        Move subordinates
+                    </button>
+                </div>
+            </div>
+        </mat-nested-tree-node>
+        <mat-nested-tree-node *matTreeNodeDef="let node; when: hasChild">
+            <div>
+                <div class="mat-tree-node employee-tree-node lower-tree-node"
+                    [class.selected-target-manager]="isTargetManager(node)"
+                    [class.lower-search-match]="isLowerSearchMatch(node)">
+                    <button mat-icon-button class="tree-node-toggle" [attr.aria-label]="'Toggle ' + node.firstName + ' ' + node.lastName"
+                        (click)="lowerTreeControl.toggle(node)">
+                        <span class="tree-node-toggle-symbol">{{ lowerTreeControl.isExpanded(node) ? '-' : '+' }}</span>
+                    </button>
+                    <button type="button" class="employee-node-label" [disabled]="!isManager(node)" (click)="selectTargetManager(node)">
+                        <span class="employee-name">{{ node.firstName }} {{ node.lastName }}</span>
+                    </button>
+                    <span class="employee-position">[{{ node.position }}]</span>
+                    <div class="move-actions" *ngIf="selectedEmployee && canMoveToManager(node)">
+                        <button mat-button class="btn btn-sm btn-outline-primary move-action" (click)="moveSelectedAsChild(node)">
+                            Move employee
+                        </button>
+                        <button *ngIf="selectedEmployeeHasChildren()" mat-button class="btn btn-sm btn-outline-primary move-action"
+                            (click)="moveSelectedChildrenTo(node)">
+                            Move subordinates
+                        </button>
+                    </div>
+                </div>
+                <ul [class.example-tree-invisible]="!lowerTreeControl.isExpanded(node)">
+                    <ng-container matTreeNodeOutlet></ng-container>
+                </ul>
+            </div>
+        </mat-nested-tree-node>
+    </mat-tree>
+    </div>
+</section>
+
+<app-spinner></app-spinner>

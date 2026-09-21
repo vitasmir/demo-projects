@@ -1,0 +1,142 @@
+<div class="container py-3">
+  <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+    <div>
+      <h2 class="mb-1">Administrace přístupu k projektům</h2>
+      <p class="small text-muted mb-0">Vyber uživatele a zaškrtni projekty, které smí vidět na vstupní stránce a otevřít přes tlačítko „Otevřít aktuální sprint“.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <button class="btn btn-outline-secondary" type="button" (click)="openProjects()">Zpět na projekty</button>
+      <button class="btn btn-dark" type="button" (click)="openAccountManagement()">Správa účtů a adminů</button>
+    </div>
+  </div>
+
+  @if (errorMessage !== '') {
+  <div class="alert alert-danger">{{ errorMessage }}</div>
+  }
+
+  @if (loadingCurrentUser) {
+  <div class="alert alert-info py-2">Načítám Task Management uživatele z JWT tokenu…</div>
+  } @else if (currentUser?.admin !== true) {
+  <div class="alert alert-warning d-flex justify-content-between align-items-center gap-2 flex-wrap">
+    <span>Administraci projektů může otevřít jen admin.</span>
+    <button class="btn btn-outline-secondary btn-sm" type="button" (click)="openProjects()">Zpět na projekty</button>
+  </div>
+  } @else {
+  <div class="card p-3">
+    <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-3">
+      <div>
+        <h5 class="mb-1">Přístupy uživatelů</h5>
+        <p class="small text-muted mb-0">Změny se projeví v seznamu projektů i při vstupu do projektu.</p>
+      </div>
+      <button class="btn btn-primary" (click)="saveSelectedUserProjectAccess()" [disabled]="adminLoading || adminSaving || selectedAdminUser() == null">
+        {{ adminSaving ? 'Ukládám...' : 'Uložit oprávnění' }}
+      </button>
+    </div>
+
+    @if (adminLoading) {
+    <div class="alert alert-info py-2 mb-0">Načítám administraci projektů…</div>
+    } @else {
+    <div class="row g-3">
+      <div class="col-lg-4">
+        <div class="admin-panel-block">
+          <h6>Účty</h6>
+          <p class="small text-muted">Tlačítka pro signup a tvorbu adminů jsou na samostatné stránce, aby byla dostupná i bez přihlášení.</p>
+          <button class="btn btn-dark w-100" type="button" (click)="openAccountManagement()">
+            Otevřít stránku správy účtů
+          </button>
+        </div>
+
+        <div class="admin-panel-block mt-3">
+          <h6>Uživatelé</h6>
+
+          @if (adminOverview.users.length === 0) {
+          <p class="mb-0 text-muted">Zatím není k dispozici žádný uživatel.</p>
+          } @else {
+          <div class="admin-user-list">
+            @for (user of adminOverview.users; track trackByUserId($index, user)) {
+            <div class="admin-user-row" [class.active]="user.id === selectedAdminUserId">
+              <button
+                type="button"
+                class="admin-user-item"
+                [class.active]="user.id === selectedAdminUserId"
+                (click)="selectAdminUser(user.id)">
+                <span class="fw-semibold">{{ user.displayName }}</span>
+                <span class="small text-muted">{{ user.username }}</span>
+                @if (user.admin === true) {
+                <span class="badge text-bg-dark">admin</span>
+                }
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-danger admin-user-delete"
+                [disabled]="adminSaving || currentUser.id === user.id"
+                (click)="deleteAdminUser(user)">
+                Smazat
+              </button>
+            </div>
+            }
+          </div>
+          }
+        </div>
+      </div>
+
+      <div class="col-lg-8">
+        <div class="admin-panel-block">
+          @if (selectedAdminUser(); as user) {
+          <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap mb-3">
+            <div>
+              <h6 class="mb-1">Projekty pro {{ user.displayName }}</h6>
+              <p class="small text-muted mb-0">Zaškrtnuté projekty se uživateli zobrazí v seznamu projektů a zpřístupní vstup do projektu i projektové comboboxy.</p>
+            </div>
+            @if (user.admin === true) {
+            <div class="badge text-bg-dark admin-note">Admin má přístup do všech projektů automaticky; checkboxy slouží pro evidenci členství.</div>
+            }
+          </div>
+
+          @if (adminOverview.projects.length === 0) {
+          <p class="mb-0 text-muted">Nejsou vytvořené žádné projekty.</p>
+          } @else {
+          <div class="admin-project-list">
+            @for (project of adminOverview.projects; track trackByProjectId($index, project)) {
+            <label class="admin-project-item">
+              <input
+                type="checkbox"
+                class="form-check-input"
+                [checked]="isProjectAssignedToSelectedUser(project.id)"
+                (change)="onSelectedUserProjectChange(project.id, $any($event.target).checked)" />
+              <div>
+                <div class="fw-semibold">{{ project.name }}</div>
+                <div class="small text-muted">{{ project.description }}</div>
+              </div>
+            </label>
+            }
+          </div>
+          }
+          } @else {
+          <p class="mb-0 text-muted">Vyber uživatele, kterému chceš nastavit přístup.</p>
+          }
+        </div>
+      </div>
+    </div>
+    }
+  </div>
+  }
+
+  @if (deleteDialog != null) {
+  <div class="delete-dialog-backdrop" (click)="closeDeleteDialog()"></div>
+  <div class="delete-dialog" role="dialog" aria-modal="true" [attr.aria-labelledby]="'delete-user-dialog-title'">
+    <div class="delete-dialog__card">
+      <h5 id="delete-user-dialog-title" class="mb-2">Potvrzení smazání uživatele</h5>
+      <p class="mb-3 text-muted">{{ deleteDialogMessage() }}</p>
+      <div class="delete-dialog__actions">
+        <button type="button" class="btn btn-outline-secondary" [disabled]="deleteDialogSubmitting" (click)="closeDeleteDialog()">
+          Zrušit
+        </button>
+        <button type="button" class="btn btn-danger" [disabled]="deleteDialogSubmitting" (click)="confirmDeleteDialog()">
+          {{ deleteDialogConfirmLabel() }}
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+</div>

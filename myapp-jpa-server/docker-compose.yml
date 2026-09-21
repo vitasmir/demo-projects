@@ -1,0 +1,149 @@
+
+
+
+
+services:
+  myapp-client:
+    build:
+      context: ../myapp-client
+      dockerfile: Dockerfile
+    ports:
+      - "4200:80"
+    networks:
+      - projects-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  backend:
+    build: .
+    ports:
+      - "9090:9090"
+#      - "5005:5005"
+    environment:
+#      - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
+      # Ensure your application is configured to connect to myapp-postgres
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${DATATABLES_DB_NAME:?Run with docker-compose-vault.sh}
+# Use service name 'postgres'
+      - SPRING_DATASOURCE_USERNAME=${DATATABLES_DB_USERNAME:?Run with docker-compose-vault.sh}
+      - SPRING_DATASOURCE_PASSWORD=${DATATABLES_DB_PASSWORD:?Run with docker-compose-vault.sh}
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=${DATATABLES_RABBITMQ_USERNAME:?Run with docker-compose-vault.sh}
+      - SPRING_RABBITMQ_PASSWORD=${DATATABLES_RABBITMQ_PASSWORD:?Run with docker-compose-vault.sh}
+      - SPRING_RABBITMQ_STOMP_PORT=61613
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=host.docker.internal:9094
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://localhost:8180/realms/myrealm
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/myrealm/protocol/openid-connect/certs
+      - KEYCLOAK_ADMIN_SERVER_URL=http://keycloak:8080
+      - KEYCLOAK_ADMIN_USERNAME=${DATATABLES_KEYCLOAK_ADMIN_USERNAME:?Run with docker-compose-vault.sh}
+      - KEYCLOAK_ADMIN_PASSWORD=${DATATABLES_KEYCLOAK_ADMIN_PASSWORD:?Run with docker-compose-vault.sh}
+      - APP_EMPLOYEE_EXPORT_DIRECTORY=/host-home
+      - APP_EMPLOYEE_EXPORT_TIME_ZONE=Europe/Prague
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ${HOME}:/host-home
+
+    networks:
+      - projects-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 30s
+
+ # Elastic Stack (ELK)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.13
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sS --fail http://localhost:9200/_cluster/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 4
+      start_period: 5s
+    networks:
+      - projects-network
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.13
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sS --fail http://localhost:5601/api/status || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - projects-network
+
+
+#  logstash:
+#    image: docker.elastic.co/logstash/logstash:7.17.13
+#    container_name: logstash
+#    volumes:
+#      - ../logstash/pipeline:/usr/share/logstash/pipeline:ro
+#    ports:
+#      - "5000:5000"
+#      - "5044:5044"
+#    depends_on:
+#      - elasticsearch
+#    healthcheck:
+#      test: ["CMD-SHELL", "curl -sS --fail http://localhost:9600/ || exit 1"]
+#      interval: 30s
+#      timeout: 10s
+#      retries: 10
+#      start_period: 30s
+#    networks:
+#      - myapp-network
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:7.17.13
+    container_name: filebeat
+    user: root
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ../filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ../filebeat/modules.d:/usr/share/filebeat/modules.d:ro
+#      - logstash
+    healthcheck:
+      test: ["CMD-SHELL", "ls /usr/share/filebeat/filebeat.yml >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - projects-network
+volumes:
+  es_data:
+    driver: local
+  filebeat_data:
+    driver: local
+
+networks:
+  projects-network:
+    external: true

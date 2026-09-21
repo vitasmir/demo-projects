@@ -1,0 +1,19 @@
+{
+  "properties": [
+    {
+      "name": "spring.rabbitmq.stomp.username",
+      "type": "java.lang.String",
+      "description": "Username used by the WebSocket STOMP broker relay client."
+    },
+    {
+      "name": "spring.rabbitmq.stomp.password",
+      "type": "java.lang.String",
+      "description": "Password used by the WebSocket STOMP broker relay client."
+    },
+    {
+      "name": "spring.rabbitmq.stomp.port",
+      "type": "java.lang.Integer",
+      "description": "STOMP broker relay port used by the WebSocket broker relay configuration."
+    }
+  ]
+}

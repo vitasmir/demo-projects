@@ -1,0 +1,12 @@
+<div class="container light-pink-background">
+  <form #todoForm="ngForm" (ngSubmit)="onSubmit()">
+    <h2 class="text-center m-2">Select avatar color</h2>
+
+    <color-sketch [color]="color" (onChangeComplete)="changeColorCompleted($event)"></color-sketch>
+
+    <div class="actions">
+      <button type="button" (click)="onSubmit()" class="btn btn-success">Use color</button>
+      <button type="button" (click)="onClose()" class="btn btn-secondary">Cancel</button>
+    </div>
+  </form>
+</div>

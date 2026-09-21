@@ -1,0 +1,155 @@
+.buttons-row li {
+    display: inline-block;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+}
+
+app-root {
+    display: block;
+    min-height: 100%;
+    overflow: hidden;
+}
+
+.my-alignment {
+    align-self: self-start;
+}
+
+.tablinks {
+    padding: 10px;
+    width: 100px;
+
+}
+
+.nav-item {
+    width: 100px;
+    text-decoration: underline;
+    color: black;
+}
+
+span .select-info {
+    visibility: false;
+
+}
+
+table#jsonTable.dataTable tbody tr:hover {
+    background-color: #ffa;
+}
+
+table#jsonTable.dataTable tbody tr:hover>.sorting_1 {
+    background-color: #ffa;
+}
+
+
+select-info {
+    visibility: false;
+}
+
+button {
+    font-size: 1.2rem;
+    padding: 5px 5px;
+}
+
+dialog::backdrop {
+    background-color: white;
+}
+
+::backdrop {
+    background-image: linear-gradient(45deg,
+            magenta,
+            rebeccapurple,
+            dodgerblue,
+            green);
+
+    opacity: 0.75;
+}
+
+.tablinks {
+    background-color: blueviolet
+}
+
+#jsonTable3 thead tr th {
+    background-color: lightskyblue
+}
+
+#jsonTable3 tbody tr:nth-child(even) {
+    background-color: beige
+}
+
+#jsonTable thead tr th {
+    background-color: lightskyblue
+}
+
+#jsonTable tbody tr:nth-child(even) {
+    background-color: beige
+}
+
+#jsonTable tbody tr:nth-child(odd) {
+    background-color: aliceblue
+}
+
+#jsonTable3 tbody tr:nth-child(odd) {
+    background-color: aliceblue
+}
+
+.my-disabled-button {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+// Keep the existing outline class names while presenting action buttons as filled controls.
+.btn-outline-primary,
+.btn-outline-secondary,
+.btn-outline-success,
+.btn-outline-danger,
+.btn-outline-warning,
+.btn-outline-info,
+.btn-outline-dark {
+    color: #fff;
+}
+
+.btn-outline-primary {
+    background-color: #0d6efd;
+}
+
+.btn-outline-secondary {
+    background-color: #6c757d;
+}
+
+.btn-outline-success {
+    background-color: #198754;
+}
+
+.btn-outline-danger {
+    background-color: #dc3545;
+}
+
+.btn-outline-warning {
+    color: #000;
+    background-color: #ffc107;
+}
+
+.btn-outline-info {
+    color: #000;
+    background-color: #0dcaf0;
+}
+
+.btn-outline-dark {
+    background-color: #212529;
+}
+
+
+
+.mat-mdc-dialog-container {
+    --mdc-dialog-container-shape: 20px;
+}
+
+body > .flatpickr-calendar,
+.cdk-overlay-container .flatpickr-calendar {
+    z-index: 10000 !important;
+}
+
+@import '@angular/material/prebuilt-themes/deeppurple-amber.css';

@@ -1,0 +1,25 @@
+<h2>1. Interpollation {{name}}</h2>
+{{name}}:
+{{topic}}
+
+<h2>2. Property binding [value]=property</h2>
+<input type="text" name="propertyDataBinding" [value]="image" />
+<br />
+<img name="propertyDataBinding2" height="300" [src]="image" (click)="changeImage()" />
+<button name="changeImage" class="btn btn-primary" (click)="changeImage()">CHANGE IMAGE</button>
+<h4>CLick on image</h4>
+
+<h2>3. Event binding</h2>
+<select name="country" #countryList (change)="onSelect(countryList.value)">
+    <option value="County">Country</option>
+    <option value="USA">USA</option>
+    <option value="CR">CR</option>
+    <option value="Poland">Poland</option>
+    <option value="Slovakia">Slovakia</option>
+</select>
+<button (click)="onSave()">Save</button>
+
+<h2>4. Two way databinding</h2>
+<input type="text" [(ngModel)]="random" />
+{{random}}<br />
+<button name="random" type="button" (click)="generateRandom()">random</button>

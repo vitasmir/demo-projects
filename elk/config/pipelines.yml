@@ -1,0 +1,14 @@
+# Multiple pipelines configuration
+# Each pipeline runs independently in the same Logstash process
+
+- pipeline.id: main
+  path.config: "config/pipeline_main.conf"
+  pipeline.workers: 2
+  pipeline.batch.size: 125
+  pipeline.batch.delay: 5
+
+- pipeline.id: secondary
+  path.config: "config/pipeline_secondary.conf"
+  pipeline.workers: 1
+  pipeline.batch.size: 125
+  pipeline.batch.delay: 5

@@ -1,0 +1,84 @@
+<div class="container py-3 account-page">
+  <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-3">
+    <div>
+      <h2 class="mb-1">Správa účtů</h2>
+      <p class="text-muted mb-0">Veřejný signup pro běžné uživatele a admin-only vytvoření dalších účtů na jednom místě.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      @if (currentUser != null) {
+      <button class="btn btn-outline-secondary" (click)="goToProjects()">Zpět na projekty</button>
+      <button class="btn btn-outline-danger" (click)="logout()">Logout</button>
+      } @else {
+      <button class="btn btn-primary" (click)="login()">Přihlásit se přes Keycloak</button>
+      }
+    </div>
+  </div>
+
+  @if (errorMessage !== '') {
+  <div class="alert alert-danger">{{ errorMessage }}</div>
+  }
+
+  @if (successMessage !== '') {
+  <div class="alert alert-success">{{ successMessage }}</div>
+  }
+
+  <div class="row g-4 align-items-stretch">
+    <div class="col-xl-6">
+      <div class="card p-4 h-100">
+        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+          <div>
+            <h4 class="mb-1">Sign up</h4>
+            <p class="text-muted mb-0">Tato stránka je veřejná, takže nový uživatel nemusí být předem přihlášený.</p>
+          </div>
+          <span class="badge text-bg-light border">{{ intent === 'signup' ? 'Doporučeno' : 'Veřejné' }}</span>
+        </div>
+
+        <input class="form-control mb-2" placeholder="Username" [(ngModel)]="signupForm.username" />
+        <input class="form-control mb-2" placeholder="Jméno" [(ngModel)]="signupForm.firstName" />
+        <input class="form-control mb-2" placeholder="Příjmení" [(ngModel)]="signupForm.lastName" />
+        <input class="form-control mb-2" type="email" placeholder="Email" [(ngModel)]="signupForm.email" />
+        <input class="form-control mb-2" type="password" placeholder="Heslo" [(ngModel)]="signupForm.password" />
+        <input class="form-control mb-3" type="password" placeholder="Potvrzení hesla" [(ngModel)]="signupForm.confirmPassword" />
+
+        <button class="btn btn-dark align-self-start" [disabled]="saving" (click)="createSignupAccount()">
+          {{ saving && intent === 'signup' ? 'Vytvářím účet...' : 'Vytvořit běžný účet' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="col-xl-6">
+      <div class="card p-4 h-100" [class.account-card-disabled]="currentUser?.admin !== true">
+        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+          <div>
+            <h4 class="mb-1">Admin create</h4>
+            <p class="text-muted mb-0">Tady admin vytvoří nový běžný účet nebo nového admina přímo do Keycloaku.</p>
+          </div>
+          <span class="badge" [class.text-bg-danger]="currentUser?.admin === true" [class.text-bg-secondary]="currentUser?.admin !== true">
+            {{ currentUser?.admin === true ? 'Admin access' : 'Jen pro admina' }}
+          </span>
+        </div>
+
+        @if (initializingCurrentUser) {
+        <div class="alert alert-info py-2">Načítám aktuálního uživatele…</div>
+        } @else if (currentUser?.admin !== true) {
+        <div class="alert alert-warning">Pro vytvoření nového admina se nejdřív přihlas admin účtem.</div>
+        }
+
+        <input class="form-control mb-2" placeholder="Username" [(ngModel)]="adminCreateForm.username" [disabled]="currentUser?.admin !== true" />
+        <input class="form-control mb-2" placeholder="Jméno" [(ngModel)]="adminCreateForm.firstName" [disabled]="currentUser?.admin !== true" />
+        <input class="form-control mb-2" placeholder="Příjmení" [(ngModel)]="adminCreateForm.lastName" [disabled]="currentUser?.admin !== true" />
+        <input class="form-control mb-2" type="email" placeholder="Email" [(ngModel)]="adminCreateForm.email" [disabled]="currentUser?.admin !== true" />
+        <input class="form-control mb-2" type="password" placeholder="Heslo" [(ngModel)]="adminCreateForm.password" [disabled]="currentUser?.admin !== true" />
+        <input class="form-control mb-2" type="password" placeholder="Potvrzení hesla" [(ngModel)]="adminCreateForm.confirmPassword" [disabled]="currentUser?.admin !== true" />
+        <label class="account-role-toggle mb-3">
+          <input type="checkbox" class="form-check-input" [(ngModel)]="adminCreateForm.admin" [disabled]="currentUser?.admin !== true" />
+          <span>Vytvořit jako admin účet</span>
+        </label>
+
+        <button class="btn btn-primary align-self-start" [disabled]="saving || currentUser?.admin !== true" (click)="createAdminManagedAccount()">
+          {{ saving && intent === 'admin' ? 'Vytvářím účet...' : 'Vytvořit účet jako admin' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

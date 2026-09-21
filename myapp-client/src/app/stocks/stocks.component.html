@@ -1,0 +1,195 @@
+<div class="stocks-root">
+  <aside class="stocks-list-panel">
+    <div class="panel-title">US akcie (NASDAQ, DJIA, S&amp;P 500)</div>
+
+    <div class="panel-state" *ngIf="loadingStocks">Načítám akcie…</div>
+
+    <button
+      *ngFor="let stock of stocks; trackBy: trackStock"
+      type="button"
+      class="stock-item"
+      [class.active]="selectedStock?.symbol === stock.symbol"
+      (click)="selectStock(stock)"
+    >
+      <div class="stock-symbol">{{ stock.symbol }}</div>
+      <div class="stock-name">{{ stock.name }}</div>
+    </button>
+  </aside>
+
+  <section class="stocks-chart-panel">
+    <div class="panel-state" *ngIf="!selectedStock && !loadingStocks">Vyber akcii vlevo.</div>
+    <div class="panel-state" *ngIf="loadingChart">Načítám graf…</div>
+    <div class="panel-state error" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+    <div class="chart-box" *ngIf="selectedStock as stock">
+      <div class="chart-header">
+        <div>
+          <h4 class="mb-0">{{ stock.name }} ({{ stock.symbol }})</h4>
+          <small class="text-muted">Vývoj ceny</small>
+        </div>
+
+        <div class="period-tabs">
+          <button
+            type="button"
+            *ngFor="let period of periods"
+            class="period-tab"
+            [class.active]="selectedPeriod === period.key"
+            (click)="setPeriod(period.key)"
+          >
+            {{ period.label }}
+          </button>
+        </div>
+      </div>
+
+      <ng-container *ngIf="!loadingChart && points.length > 0; else noChartData">
+      <div class="stats-row">
+        <div class="stat-card">
+          <span>Min</span>
+          <strong>{{ formatPrice(minPrice) }}</strong>
+        </div>
+        <div class="stat-card">
+          <span>Max</span>
+          <strong>{{ formatPrice(maxPrice) }}</strong>
+        </div>
+        <div class="stat-card">
+          <span>Poslední</span>
+          <strong>{{ formatPrice(lastPrice) }}</strong>
+        </div>
+        <div class="stat-card" [class.positive]="changePercent >= 0" [class.negative]="changePercent < 0">
+          <span>Změna</span>
+          <strong>{{ changePercent | number: '1.2-2' }}%</strong>
+        </div>
+      </div>
+
+      <div class="chart-with-axes">
+        <div class="y-axis-panel">
+          <div class="y-axis-label">Cena (USD)</div>
+        </div>
+
+        <div class="chart-area">
+          <div class="chart-interactive-wrap" #chartHost (mouseleave)="onChartMouseLeave()">
+            <svg
+              #chartSvg
+              [attr.viewBox]="'0 0 ' + chartWidth + ' ' + chartHeight"
+              class="price-chart"
+              preserveAspectRatio="none"
+              aria-label="Graf ceny akcie"
+              (mousemove)="onChartMouseMove($event, chartSvg)"
+            >
+              <defs>
+                <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#4f7cff" stop-opacity="0.85"></stop>
+                  <stop offset="100%" stop-color="#4f7cff" stop-opacity="0.25"></stop>
+                </linearGradient>
+              </defs>
+
+              <g *ngIf="points.length">
+                <line
+                  [attr.x1]="chartPadding"
+                  [attr.y1]="chartPadding"
+                  [attr.x2]="chartPadding"
+                  [attr.y2]="plotEndY"
+                  class="chart-axis-line"
+                ></line>
+
+                <line
+                  [attr.x1]="chartPadding"
+                  [attr.y1]="plotEndY"
+                  [attr.x2]="plotEndX"
+                  [attr.y2]="plotEndY"
+                  class="chart-axis-line"
+                ></line>
+
+                <ng-container *ngFor="let tick of yAxisTicks">
+                  <text
+                    [attr.x]="chartPadding - 10"
+                    [attr.y]="getYAxisPosition(tick.topPercent) + 4"
+                    text-anchor="end"
+                    class="chart-axis-text"
+                  >
+                    {{ tick.label }}
+                  </text>
+                  <line
+                    [attr.x1]="chartPadding"
+                    [attr.y1]="getYAxisPosition(tick.topPercent)"
+                    [attr.x2]="plotEndX"
+                    [attr.y2]="getYAxisPosition(tick.topPercent)"
+                    class="chart-grid-line"
+                  ></line>
+                  <line
+                    [attr.x1]="chartPadding - 8"
+                    [attr.y1]="getYAxisPosition(tick.topPercent)"
+                    [attr.x2]="chartPadding"
+                    [attr.y2]="getYAxisPosition(tick.topPercent)"
+                    class="chart-axis-line"
+                  ></line>
+                </ng-container>
+
+                <ng-container *ngFor="let tick of xAxisTicks">
+                  <line
+                    [attr.x1]="getXAxisPosition(tick.leftPercent)"
+                    [attr.y1]="plotEndY"
+                    [attr.x2]="getXAxisPosition(tick.leftPercent)"
+                    [attr.y2]="plotEndY + 6"
+                    class="chart-axis-line"
+                  ></line>
+                  <text
+                    [attr.x]="getXAxisPosition(tick.leftPercent)"
+                    [attr.y]="plotEndY + 22"
+                    text-anchor="middle"
+                    class="chart-axis-text chart-axis-text-x"
+                  >
+                    {{ tick.label }}
+                  </text>
+                </ng-container>
+              </g>
+
+              <path [attr.d]="chartPath" fill="none" stroke="#2f5bff" stroke-width="3"></path>
+
+              <line
+                *ngIf="hoveredPoint"
+                [attr.x1]="hoverX"
+                [attr.x2]="hoverX"
+                [attr.y1]="chartPadding"
+                [attr.y2]="chartHeight - chartPadding"
+                stroke="#90a7ff"
+                stroke-width="1.5"
+                stroke-dasharray="4 4"
+              ></line>
+
+              <circle
+                *ngIf="hoveredPoint"
+                [attr.cx]="hoverX"
+                [attr.cy]="hoverY"
+                r="5"
+                fill="#2f5bff"
+                stroke="#ffffff"
+                stroke-width="2"
+              ></circle>
+            </svg>
+
+            <div
+              class="chart-tooltip"
+              *ngIf="hoveredPoint"
+              [class.align-right]="tooltipRightAligned"
+              [style.left.%]="hoverXPercent"
+            >
+              <div class="tooltip-time">{{ formatShortDate(hoveredPoint.timestamp) }}</div>
+              <div class="tooltip-price">{{ formatPrice(hoveredPoint.price) }} USD</div>
+            </div>
+          </div>
+
+          <div class="x-axis-label">Datum / čas</div>
+        </div>
+      </div>
+      </ng-container>
+
+      <ng-template #noChartData>
+        <div class="panel-state" *ngIf="!loadingChart && !errorMessage">
+          Pro tuto akcii nejsou dostupná data.
+        </div>
+      </ng-template>
+
+    </div>
+  </section>
+</div>

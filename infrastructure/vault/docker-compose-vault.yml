@@ -1,0 +1,30 @@
+services:
+  vault:
+    image: hashicorp/vault:2.1
+    container_name: vault
+    command: vault server -config=/vault/config/vault.hcl
+    cap_add:
+      - IPC_LOCK
+    networks:
+      - projects-network
+    environment:
+      VAULT_ADDR: http://0.0.0.0:8200
+    ports:
+      - "8200:8200"
+      - "8201:8201"
+    volumes:
+      - vault_data:/vault/file
+      - ./vault.hcl:/vault/config/vault.hcl:ro
+    restart: always
+
+volumes:
+  vault_data:
+    driver: local
+
+networks:
+  projects-network:
+    external: true
+
+
+
+

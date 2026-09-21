@@ -1,0 +1,279 @@
+:host {
+  display: block;
+  width: 100%;
+  --stocks-root-top-padding: 20px;
+  --stocks-chart-panel-padding: 16px;
+}
+
+.stocks-root {
+  display: flex;
+  align-items: stretch;
+  background: #f5f7fb;
+  padding: var(--stocks-root-top-padding) 0 32px;
+}
+
+.stocks-list-panel {
+  width: 320px;
+  min-width: 280px;
+  max-height: calc(100vh - 120px);
+  min-height: 0;
+  border-right: 1px solid #dce3ef;
+  background: #ffffff;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-self: stretch;
+  overflow-y: auto;
+}
+
+.panel-title {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.stock-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  border: 1px solid #dce3ef;
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px 12px;
+  transition: all 0.15s ease;
+}
+
+.stock-item:hover {
+  border-color: #92adff;
+  background: #f8fbff;
+}
+
+.stock-item.active {
+  border-color: #3f6cff;
+  background: #edf2ff;
+}
+
+.stock-symbol {
+  font-weight: 700;
+}
+
+.stock-name {
+  font-size: 0.86rem;
+  color: #586275;
+}
+
+.stocks-chart-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: var(--stocks-chart-panel-padding);
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  align-self: stretch;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.period-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.period-tab {
+  border: 1px solid #ced8ea;
+  border-radius: 8px;
+  background: #fff;
+  padding: 6px 10px;
+  font-size: 0.9rem;
+}
+
+.period-tab.active {
+  border-color: #3f6cff;
+  background: #e8efff;
+  color: #1c3daa;
+}
+
+.panel-state {
+  border: 1px dashed #cfd8e6;
+  border-radius: 10px;
+  background: #fff;
+  color: #586275;
+  padding: 12px;
+}
+
+.panel-state.error {
+  color: #b33232;
+  border-color: #efc1c1;
+}
+
+.chart-box {
+  background: #fff;
+  border: 1px solid #dce3ef;
+  border-radius: 12px;
+  padding: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 0 0 auto;
+  position: sticky;
+  top: calc(var(--stocks-root-top-padding) + var(--stocks-chart-panel-padding));
+  align-self: stretch;
+  z-index: 2;
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.stat-card {
+  border: 1px solid #e0e7f3;
+  border-radius: 10px;
+  padding: 10px;
+  background: #f9fbff;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-card span {
+  font-size: 0.8rem;
+  color: #5f6a7d;
+}
+
+.stat-card strong {
+  font-size: 1.1rem;
+}
+
+.stat-card.positive strong {
+  color: #14753b;
+}
+
+.stat-card.negative strong {
+  color: #b33131;
+}
+
+.price-chart {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #eef3ff 0%, #ffffff 100%);
+  cursor: crosshair;
+}
+
+.chart-grid-line {
+  stroke: rgba(91, 112, 160, 0.18);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.chart-axis-line {
+  stroke: rgba(91, 112, 160, 0.55);
+  stroke-width: 1;
+}
+
+.chart-axis-text {
+  fill: #5f6a7d;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-axis-text-x {
+  dominant-baseline: hanging;
+}
+
+.chart-interactive-wrap {
+  position: relative;
+  flex: 1;
+  min-height: clamp(280px, 42vh, 520px);
+  max-height: 520px;
+  min-width: 0;
+  z-index: 0;
+}
+
+.chart-with-axes {
+  display: grid;
+  grid-template-columns: minmax(72px, 96px) minmax(0, 1fr);
+  gap: 8px;
+  align-items: stretch;
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 100%;
+  align-self: stretch;
+}
+
+.chart-area {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.y-axis-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  min-height: 0;
+}
+
+.y-axis-label {
+  text-align: right;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #5f6a7d;
+  user-select: none;
+}
+
+.x-axis-label {
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #5f6a7d;
+  user-select: none;
+}
+
+.chart-tooltip {
+  position: absolute;
+  top: 12px;
+  transform: translate(12px, 0);
+  background: rgba(21, 29, 49, 0.94);
+  color: #fff;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.8rem;
+  line-height: 1.3;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 20;
+}
+
+.chart-tooltip.align-right {
+  transform: translate(calc(-100% - 12px), 0);
+}
+
+.tooltip-time {
+  color: #d6def9;
+}
+
+.tooltip-price {
+  font-weight: 700;
+  margin-top: 2px;
+}

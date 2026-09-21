@@ -1,0 +1,658 @@
+package com.angular.backend.stocks;
+
+import java.io.IOException;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import com.angular.backend.stocks.dto.StockDto;
+import com.angular.backend.stocks.dto.StockHistoryDto;
+import com.angular.backend.stocks.dto.StockPricePointDto;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import static org.springframework.http.HttpStatus.BAD_GATEWAY;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+
+@Service
+public class NasdaqStocksService {
+
+        // Combined large-cap US market snapshot for UI display (S&P 500 + DJIA + existing NASDAQ-only titles)
+        private static final List<StockDto> NASDAQ_STOCKS = List.of(
+            new StockDto("A", "Agilent Technologies"),
+            new StockDto("AAPL", "Apple Inc."),
+            new StockDto("ABBV", "AbbVie"),
+            new StockDto("ABNB", "Airbnb"),
+            new StockDto("ABT", "Abbott Laboratories"),
+            new StockDto("ACGL", "Arch Capital Group"),
+            new StockDto("ACN", "Accenture"),
+            new StockDto("ADBE", "Adobe Inc."),
+            new StockDto("ADI", "Analog Devices"),
+            new StockDto("ADM", "Archer Daniels Midland"),
+            new StockDto("ADP", "Automatic Data Processing"),
+            new StockDto("ADSK", "Autodesk"),
+            new StockDto("AEE", "Ameren"),
+            new StockDto("AEP", "American Electric Power"),
+            new StockDto("AES", "AES Corporation"),
+            new StockDto("AFL", "Aflac"),
+            new StockDto("AIG", "American International Group"),
+            new StockDto("AIZ", "Assurant"),
+            new StockDto("AJG", "Arthur J. Gallagher & Co."),
+            new StockDto("AKAM", "Akamai Technologies"),
+            new StockDto("ALB", "Albemarle Corporation"),
+            new StockDto("ALGN", "Align Technology"),
+            new StockDto("ALL", "Allstate"),
+            new StockDto("ALLE", "Allegion"),
+            new StockDto("AMAT", "Applied Materials"),
+            new StockDto("AMCR", "Amcor"),
+            new StockDto("AMD", "Advanced Micro Devices"),
+            new StockDto("AME", "Ametek"),
+            new StockDto("AMGN", "Amgen"),
+            new StockDto("AMP", "Ameriprise Financial"),
+            new StockDto("AMT", "American Tower"),
+            new StockDto("AMZN", "Amazon"),
+            new StockDto("ANET", "Arista Networks"),
+            new StockDto("ANSS", "Ansys"),
+            new StockDto("AON", "Aon plc"),
+            new StockDto("AOS", "A. O. Smith"),
+            new StockDto("APA", "APA Corporation"),
+            new StockDto("APD", "Air Products"),
+            new StockDto("APH", "Amphenol"),
+            new StockDto("APO", "Apollo Global Management"),
+            new StockDto("APP", "AppLovin"),
+            new StockDto("APTV", "Aptiv"),
+            new StockDto("ARE", "Alexandria Real Estate Equities"),
+            new StockDto("ARES", "Ares Management"),
+            new StockDto("ARM", "Arm Holdings"),
+            new StockDto("ASML", "ASML Holding"),
+            new StockDto("ATO", "Atmos Energy"),
+            new StockDto("AVB", "AvalonBay Communities"),
+            new StockDto("AVGO", "Broadcom"),
+            new StockDto("AVY", "Avery Dennison"),
+            new StockDto("AWK", "American Water Works"),
+            new StockDto("AXON", "Axon Enterprise"),
+            new StockDto("AXP", "American Express"),
+            new StockDto("AZN", "AstraZeneca"),
+            new StockDto("AZO", "AutoZone"),
+            new StockDto("BA", "Boeing"),
+            new StockDto("BAC", "Bank of America"),
+            new StockDto("BALL", "Ball Corporation"),
+            new StockDto("BAX", "Baxter International"),
+            new StockDto("BBY", "Best Buy"),
+            new StockDto("BDX", "Becton Dickinson"),
+            new StockDto("BEN", "Franklin Resources"),
+            new StockDto("BF.B", "Brown-Forman"),
+            new StockDto("BG", "Bunge Global"),
+            new StockDto("BIIB", "Biogen"),
+            new StockDto("BK", "BNY Mellon"),
+            new StockDto("BKNG", "Booking Holdings"),
+            new StockDto("BKR", "Baker Hughes"),
+            new StockDto("BLDR", "Builders FirstSource"),
+            new StockDto("BLK", "BlackRock"),
+            new StockDto("BMY", "Bristol Myers Squibb"),
+            new StockDto("BR", "Broadridge Financial Solutions"),
+            new StockDto("BRK.B", "Berkshire Hathaway"),
+            new StockDto("BRO", "Brown & Brown"),
+            new StockDto("BSX", "Boston Scientific"),
+            new StockDto("BX", "Blackstone Inc."),
+            new StockDto("BXP", "BXP, Inc."),
+            new StockDto("C", "Citigroup"),
+            new StockDto("CAG", "Conagra Brands"),
+            new StockDto("CAH", "Cardinal Health"),
+            new StockDto("CARR", "Carrier Global"),
+            new StockDto("CAT", "Caterpillar Inc."),
+            new StockDto("CB", "Chubb Limited"),
+            new StockDto("CBRE", "CBRE Group"),
+            new StockDto("CCI", "Crown Castle"),
+            new StockDto("CCL", "Carnival"),
+            new StockDto("CDNS", "Cadence Design Systems"),
+            new StockDto("CDW", "CDW Corporation"),
+            new StockDto("CEG", "Constellation Energy"),
+            new StockDto("CF", "CF Industries"),
+            new StockDto("CFG", "Citizens Financial Group"),
+            new StockDto("CHD", "Church & Dwight"),
+            new StockDto("CHRW", "C.H. Robinson"),
+            new StockDto("CHTR", "Charter Communications"),
+            new StockDto("CI", "Cigna"),
+            new StockDto("CIEN", "Ciena"),
+            new StockDto("CINF", "Cincinnati Financial"),
+            new StockDto("CL", "Colgate-Palmolive"),
+            new StockDto("CLX", "Clorox"),
+            new StockDto("CMCSA", "Comcast"),
+            new StockDto("CME", "CME Group"),
+            new StockDto("CMG", "Chipotle Mexican Grill"),
+            new StockDto("CMI", "Cummins"),
+            new StockDto("CMS", "CMS Energy"),
+            new StockDto("CNC", "Centene Corporation"),
+            new StockDto("CNP", "CenterPoint Energy"),
+            new StockDto("COF", "Capital One"),
+            new StockDto("COIN", "Coinbase"),
+            new StockDto("COO", "Cooper Companies (The)"),
+            new StockDto("COP", "ConocoPhillips"),
+            new StockDto("COR", "Cencora"),
+            new StockDto("COST", "Costco"),
+            new StockDto("CPAY", "Corpay"),
+            new StockDto("CPB", "Campbell's Company (The)"),
+            new StockDto("CPRT", "Copart"),
+            new StockDto("CPT", "Camden Property Trust"),
+            new StockDto("CRH", "CRH plc"),
+            new StockDto("CRL", "Charles River Laboratories"),
+            new StockDto("CRM", "Salesforce"),
+            new StockDto("CRWD", "CrowdStrike"),
+            new StockDto("CSCO", "Cisco"),
+            new StockDto("CSGP", "CoStar Group"),
+            new StockDto("CSX", "CSX Corporation"),
+            new StockDto("CTAS", "Cintas"),
+            new StockDto("CTRA", "Coterra"),
+            new StockDto("CTSH", "Cognizant"),
+            new StockDto("CTVA", "Corteva"),
+            new StockDto("CVNA", "Carvana"),
+            new StockDto("CVS", "CVS Health"),
+            new StockDto("CVX", "Chevron Corporation"),
+            new StockDto("D", "Dominion Energy"),
+            new StockDto("DAL", "Delta Air Lines"),
+            new StockDto("DASH", "DoorDash"),
+            new StockDto("DD", "DuPont"),
+            new StockDto("DDOG", "Datadog"),
+            new StockDto("DE", "Deere & Company"),
+            new StockDto("DECK", "Deckers Brands"),
+            new StockDto("DELL", "Dell Technologies"),
+            new StockDto("DG", "Dollar General"),
+            new StockDto("DGX", "Quest Diagnostics"),
+            new StockDto("DHI", "D. R. Horton"),
+            new StockDto("DHR", "Danaher Corporation"),
+            new StockDto("DIS", "Walt Disney Company (The)"),
+            new StockDto("DLR", "Digital Realty"),
+            new StockDto("DLTR", "Dollar Tree"),
+            new StockDto("DOC", "Healthpeak Properties"),
+            new StockDto("DOV", "Dover Corporation"),
+            new StockDto("DOW", "Dow Inc."),
+            new StockDto("DPZ", "Domino's"),
+            new StockDto("DRI", "Darden Restaurants"),
+            new StockDto("DTE", "DTE Energy"),
+            new StockDto("DUK", "Duke Energy"),
+            new StockDto("DVA", "DaVita"),
+            new StockDto("DVN", "Devon Energy"),
+            new StockDto("DXCM", "Dexcom"),
+            new StockDto("EA", "Electronic Arts"),
+            new StockDto("EBAY", "eBay Inc."),
+            new StockDto("ECL", "Ecolab"),
+            new StockDto("ED", "Consolidated Edison"),
+            new StockDto("EFX", "Equifax"),
+            new StockDto("EG", "Everest Group"),
+            new StockDto("EIX", "Edison International"),
+            new StockDto("EL", "Estée Lauder Companies (The)"),
+            new StockDto("ELV", "Elevance Health"),
+            new StockDto("EME", "Emcor"),
+            new StockDto("EMR", "Emerson Electric"),
+            new StockDto("EOG", "EOG Resources"),
+            new StockDto("EPAM", "EPAM Systems"),
+            new StockDto("EQIX", "Equinix"),
+            new StockDto("EQR", "Equity Residential"),
+            new StockDto("EQT", "EQT Corporation"),
+            new StockDto("ERIE", "Erie Indemnity"),
+            new StockDto("ES", "Eversource Energy"),
+            new StockDto("ESS", "Essex Property Trust"),
+            new StockDto("ETN", "Eaton Corporation"),
+            new StockDto("ETR", "Entergy"),
+            new StockDto("EVRG", "Evergy"),
+            new StockDto("EW", "Edwards Lifesciences"),
+            new StockDto("EXC", "Exelon"),
+            new StockDto("EXE", "Expand Energy"),
+            new StockDto("EXPD", "Expeditors International"),
+            new StockDto("EXPE", "Expedia Group"),
+            new StockDto("EXR", "Extra Space Storage"),
+            new StockDto("F", "Ford Motor Company"),
+            new StockDto("FANG", "Diamondback Energy"),
+            new StockDto("FAST", "Fastenal"),
+            new StockDto("FCX", "Freeport-McMoRan"),
+            new StockDto("FDS", "FactSet"),
+            new StockDto("FDX", "FedEx"),
+            new StockDto("FE", "FirstEnergy"),
+            new StockDto("FFIV", "F5, Inc."),
+            new StockDto("FICO", "Fair Isaac"),
+            new StockDto("FIS", "Fidelity National Information Services"),
+            new StockDto("FISV", "Fiserv"),
+            new StockDto("FITB", "Fifth Third Bancorp"),
+            new StockDto("FIX", "Comfort Systems USA"),
+            new StockDto("FOX", "Fox Corporation (Class B)"),
+            new StockDto("FOXA", "Fox Corporation (Class A)"),
+            new StockDto("FRT", "Federal Realty Investment Trust"),
+            new StockDto("FSLR", "First Solar"),
+            new StockDto("FTNT", "Fortinet"),
+            new StockDto("FTV", "Fortive"),
+            new StockDto("GD", "General Dynamics"),
+            new StockDto("GDDY", "GoDaddy"),
+            new StockDto("GE", "GE Aerospace"),
+            new StockDto("GEHC", "GE HealthCare"),
+            new StockDto("GEN", "Gen Digital"),
+            new StockDto("GEV", "GE Vernova"),
+            new StockDto("GFS", "GlobalFoundries"),
+            new StockDto("GILD", "Gilead Sciences"),
+            new StockDto("GIS", "General Mills"),
+            new StockDto("GL", "Globe Life"),
+            new StockDto("GLW", "Corning Inc."),
+            new StockDto("GM", "General Motors"),
+            new StockDto("GNRC", "Generac"),
+            new StockDto("GOOG", "Alphabet Inc. (Class C)"),
+            new StockDto("GOOGL", "Alphabet Inc. (Class A)"),
+            new StockDto("GPC", "Genuine Parts Company"),
+            new StockDto("GPN", "Global Payments"),
+            new StockDto("GRMN", "Garmin"),
+            new StockDto("GS", "Goldman Sachs"),
+            new StockDto("GWW", "W. W. Grainger"),
+            new StockDto("HAL", "Halliburton"),
+            new StockDto("HAS", "Hasbro"),
+            new StockDto("HBAN", "Huntington Bancshares"),
+            new StockDto("HCA", "HCA Healthcare"),
+            new StockDto("HD", "Home Depot (The)"),
+            new StockDto("HIG", "Hartford (The)"),
+            new StockDto("HII", "Huntington Ingalls Industries"),
+            new StockDto("HLT", "Hilton Worldwide"),
+            new StockDto("HOLX", "Hologic"),
+            new StockDto("HON", "Honeywell"),
+            new StockDto("HOOD", "Robinhood Markets"),
+            new StockDto("HPE", "Hewlett Packard Enterprise"),
+            new StockDto("HPQ", "HP Inc."),
+            new StockDto("HRL", "Hormel Foods"),
+            new StockDto("HSIC", "Henry Schein"),
+            new StockDto("HST", "Host Hotels & Resorts"),
+            new StockDto("HSY", "Hershey Company (The)"),
+            new StockDto("HUBB", "Hubbell Incorporated"),
+            new StockDto("HUM", "Humana"),
+            new StockDto("HWM", "Howmet Aerospace"),
+            new StockDto("IBKR", "Interactive Brokers"),
+            new StockDto("IBM", "IBM"),
+            new StockDto("ICE", "Intercontinental Exchange"),
+            new StockDto("IDXX", "Idexx Laboratories"),
+            new StockDto("IEX", "IDEX Corporation"),
+            new StockDto("IFF", "International Flavors & Fragrances"),
+            new StockDto("ILMN", "Illumina"),
+            new StockDto("INCY", "Incyte"),
+            new StockDto("INTC", "Intel"),
+            new StockDto("INTU", "Intuit"),
+            new StockDto("INVH", "Invitation Homes"),
+            new StockDto("IP", "International Paper"),
+            new StockDto("IQV", "IQVIA"),
+            new StockDto("IR", "Ingersoll Rand"),
+            new StockDto("IRM", "Iron Mountain"),
+            new StockDto("ISRG", "Intuitive Surgical"),
+            new StockDto("IT", "Gartner"),
+            new StockDto("ITW", "Illinois Tool Works"),
+            new StockDto("IVZ", "Invesco"),
+            new StockDto("J", "Jacobs Solutions"),
+            new StockDto("JBHT", "J.B. Hunt"),
+            new StockDto("JBL", "Jabil"),
+            new StockDto("JCI", "Johnson Controls"),
+            new StockDto("JKHY", "Jack Henry & Associates"),
+            new StockDto("JNJ", "Johnson & Johnson"),
+            new StockDto("JPM", "JPMorgan Chase"),
+            new StockDto("KDP", "Keurig Dr Pepper"),
+            new StockDto("KEY", "KeyCorp"),
+            new StockDto("KEYS", "Keysight Technologies"),
+            new StockDto("KHC", "Kraft Heinz"),
+            new StockDto("KIM", "Kimco Realty"),
+            new StockDto("KKR", "KKR & Co."),
+            new StockDto("KLAC", "KLA Corporation"),
+            new StockDto("KMB", "Kimberly-Clark"),
+            new StockDto("KMI", "Kinder Morgan"),
+            new StockDto("KO", "Coca-Cola Company (The)"),
+            new StockDto("KR", "Kroger"),
+            new StockDto("KVUE", "Kenvue"),
+            new StockDto("L", "Loews Corporation"),
+            new StockDto("LDOS", "Leidos"),
+            new StockDto("LEN", "Lennar"),
+            new StockDto("LH", "Labcorp"),
+            new StockDto("LHX", "L3Harris"),
+            new StockDto("LII", "Lennox International"),
+            new StockDto("LIN", "Linde plc"),
+            new StockDto("LLY", "Lilly (Eli)"),
+            new StockDto("LMT", "Lockheed Martin"),
+            new StockDto("LNT", "Alliant Energy"),
+            new StockDto("LOW", "Lowe's"),
+            new StockDto("LRCX", "Lam Research"),
+            new StockDto("LULU", "Lululemon Athletica"),
+            new StockDto("LUV", "Southwest Airlines"),
+            new StockDto("LVS", "Las Vegas Sands"),
+            new StockDto("LW", "Lamb Weston"),
+            new StockDto("LYB", "LyondellBasell"),
+            new StockDto("LYV", "Live Nation Entertainment"),
+            new StockDto("MA", "Mastercard"),
+            new StockDto("MAA", "Mid-America Apartment Communities"),
+            new StockDto("MAR", "Marriott International"),
+            new StockDto("MAS", "Masco"),
+            new StockDto("MCD", "McDonald's"),
+            new StockDto("MCHP", "Microchip Technology"),
+            new StockDto("MCK", "McKesson Corporation"),
+            new StockDto("MCO", "Moody's Corporation"),
+            new StockDto("MDB", "MongoDB"),
+            new StockDto("MDLZ", "Mondelez International"),
+            new StockDto("MDT", "Medtronic"),
+            new StockDto("MELI", "MercadoLibre"),
+            new StockDto("MET", "MetLife"),
+            new StockDto("META", "Meta Platforms"),
+            new StockDto("MGM", "MGM Resorts"),
+            new StockDto("MKC", "McCormick & Company"),
+            new StockDto("MLM", "Martin Marietta Materials"),
+            new StockDto("MMM", "3M"),
+            new StockDto("MNST", "Monster Beverage"),
+            new StockDto("MO", "Altria"),
+            new StockDto("MOH", "Molina Healthcare"),
+            new StockDto("MOS", "Mosaic Company (The)"),
+            new StockDto("MPC", "Marathon Petroleum"),
+            new StockDto("MPWR", "Monolithic Power Systems"),
+            new StockDto("MRK", "Merck & Co."),
+            new StockDto("MRNA", "Moderna"),
+            new StockDto("MRSH", "Marsh McLennan"),
+            new StockDto("MRVL", "Marvell Technology"),
+            new StockDto("MS", "Morgan Stanley"),
+            new StockDto("MSCI", "MSCI Inc."),
+            new StockDto("MSFT", "Microsoft"),
+            new StockDto("MSI", "Motorola Solutions"),
+            new StockDto("MTB", "M&T Bank"),
+            new StockDto("MTCH", "Match Group"),
+            new StockDto("MTD", "Mettler Toledo"),
+            new StockDto("MU", "Micron Technology"),
+            new StockDto("NCLH", "Norwegian Cruise Line Holdings"),
+            new StockDto("NDAQ", "Nasdaq, Inc."),
+            new StockDto("NDSN", "Nordson Corporation"),
+            new StockDto("NEE", "NextEra Energy"),
+            new StockDto("NEM", "Newmont"),
+            new StockDto("NFLX", "Netflix"),
+            new StockDto("NI", "NiSource"),
+            new StockDto("NKE", "Nike, Inc."),
+            new StockDto("NOC", "Northrop Grumman"),
+            new StockDto("NOW", "ServiceNow"),
+            new StockDto("NRG", "NRG Energy"),
+            new StockDto("NSC", "Norfolk Southern"),
+            new StockDto("NTAP", "NetApp"),
+            new StockDto("NTRS", "Northern Trust"),
+            new StockDto("NUE", "Nucor"),
+            new StockDto("NVDA", "Nvidia"),
+            new StockDto("NVR", "NVR, Inc."),
+            new StockDto("NWS", "News Corp (Class B)"),
+            new StockDto("NWSA", "News Corp (Class A)"),
+            new StockDto("NXPI", "NXP Semiconductors"),
+            new StockDto("O", "Realty Income"),
+            new StockDto("ODFL", "Old Dominion"),
+            new StockDto("OKE", "Oneok"),
+            new StockDto("OMC", "Omnicom Group"),
+            new StockDto("ON", "ON Semiconductor"),
+            new StockDto("ORCL", "Oracle Corporation"),
+            new StockDto("ORLY", "O'Reilly Automotive"),
+            new StockDto("OTIS", "Otis Worldwide"),
+            new StockDto("OXY", "Occidental Petroleum"),
+            new StockDto("PANW", "Palo Alto Networks"),
+            new StockDto("PAYC", "Paycom"),
+            new StockDto("PAYX", "Paychex"),
+            new StockDto("PCAR", "Paccar"),
+            new StockDto("PCG", "PG&E Corporation"),
+            new StockDto("PDD", "PDD Holdings"),
+            new StockDto("PEG", "Public Service Enterprise Group"),
+            new StockDto("PEP", "PepsiCo"),
+            new StockDto("PFE", "Pfizer"),
+            new StockDto("PFG", "Principal Financial Group"),
+            new StockDto("PG", "Procter & Gamble"),
+            new StockDto("PGR", "Progressive Corporation"),
+            new StockDto("PH", "Parker Hannifin"),
+            new StockDto("PHM", "PulteGroup"),
+            new StockDto("PKG", "Packaging Corporation of America"),
+            new StockDto("PLD", "Prologis"),
+            new StockDto("PLTR", "Palantir Technologies"),
+            new StockDto("PM", "Philip Morris International"),
+            new StockDto("PNC", "PNC Financial Services"),
+            new StockDto("PNR", "Pentair"),
+            new StockDto("PNW", "Pinnacle West Capital"),
+            new StockDto("PODD", "Insulet Corporation"),
+            new StockDto("POOL", "Pool Corporation"),
+            new StockDto("PPG", "PPG Industries"),
+            new StockDto("PPL", "PPL Corporation"),
+            new StockDto("PRU", "Prudential Financial"),
+            new StockDto("PSA", "Public Storage"),
+            new StockDto("PSKY", "Paramount Skydance Corporation"),
+            new StockDto("PSX", "Phillips 66"),
+            new StockDto("PTC", "PTC Inc."),
+            new StockDto("PWR", "Quanta Services"),
+            new StockDto("PYPL", "PayPal"),
+            new StockDto("Q", "Qnity Electronics"),
+            new StockDto("QCOM", "Qualcomm"),
+            new StockDto("RCL", "Royal Caribbean Group"),
+            new StockDto("REG", "Regency Centers"),
+            new StockDto("REGN", "Regeneron Pharmaceuticals"),
+            new StockDto("RF", "Regions Financial Corporation"),
+            new StockDto("RJF", "Raymond James Financial"),
+            new StockDto("RL", "Ralph Lauren Corporation"),
+            new StockDto("RMD", "ResMed"),
+            new StockDto("ROK", "Rockwell Automation"),
+            new StockDto("ROL", "Rollins, Inc."),
+            new StockDto("ROP", "Roper Technologies"),
+            new StockDto("ROST", "Ross Stores"),
+            new StockDto("RSG", "Republic Services"),
+            new StockDto("RTX", "RTX Corporation"),
+            new StockDto("RVTY", "Revvity"),
+            new StockDto("SBAC", "SBA Communications"),
+            new StockDto("SBUX", "Starbucks"),
+            new StockDto("SCHW", "Charles Schwab Corporation"),
+            new StockDto("SHW", "Sherwin-Williams"),
+            new StockDto("SJM", "J.M. Smucker Company (The)"),
+            new StockDto("SLB", "Schlumberger"),
+            new StockDto("SMCI", "Supermicro"),
+            new StockDto("SNA", "Snap-on"),
+            new StockDto("SNDK", "Sandisk"),
+            new StockDto("SNPS", "Synopsys"),
+            new StockDto("SO", "Southern Company"),
+            new StockDto("SOLV", "Solventum"),
+            new StockDto("SPG", "Simon Property Group"),
+            new StockDto("SPGI", "S&P Global"),
+            new StockDto("SRE", "Sempra"),
+            new StockDto("STE", "Steris"),
+            new StockDto("STLD", "Steel Dynamics"),
+            new StockDto("STT", "State Street Corporation"),
+            new StockDto("STX", "Seagate Technology"),
+            new StockDto("STZ", "Constellation Brands"),
+            new StockDto("SW", "Smurfit Westrock"),
+            new StockDto("SWK", "Stanley Black & Decker"),
+            new StockDto("SWKS", "Skyworks Solutions"),
+            new StockDto("SYF", "Synchrony Financial"),
+            new StockDto("SYK", "Stryker Corporation"),
+            new StockDto("SYY", "Sysco"),
+            new StockDto("T", "AT&T"),
+            new StockDto("TAP", "Molson Coors Beverage Company"),
+            new StockDto("TDG", "TransDigm Group"),
+            new StockDto("TDY", "Teledyne Technologies"),
+            new StockDto("TEAM", "Atlassian"),
+            new StockDto("TECH", "Bio-Techne"),
+            new StockDto("TEL", "TE Connectivity"),
+            new StockDto("TER", "Teradyne"),
+            new StockDto("TFC", "Truist Financial"),
+            new StockDto("TGT", "Target Corporation"),
+            new StockDto("TJX", "TJX Companies"),
+            new StockDto("TKO", "TKO Group Holdings"),
+            new StockDto("TMO", "Thermo Fisher Scientific"),
+            new StockDto("TMUS", "T-Mobile US"),
+            new StockDto("TPL", "Texas Pacific Land Corporation"),
+            new StockDto("TPR", "Tapestry, Inc."),
+            new StockDto("TRGP", "Targa Resources"),
+            new StockDto("TRMB", "Trimble Inc."),
+            new StockDto("TROW", "T. Rowe Price"),
+            new StockDto("TRV", "Travelers Companies (The)"),
+            new StockDto("TSCO", "Tractor Supply"),
+            new StockDto("TSLA", "Tesla, Inc."),
+            new StockDto("TSN", "Tyson Foods"),
+            new StockDto("TT", "Trane Technologies"),
+            new StockDto("TTD", "Trade Desk (The)"),
+            new StockDto("TTWO", "Take-Two Interactive"),
+            new StockDto("TXN", "Texas Instruments"),
+            new StockDto("TXT", "Textron"),
+            new StockDto("TYL", "Tyler Technologies"),
+            new StockDto("UAL", "United Airlines Holdings"),
+            new StockDto("UBER", "Uber"),
+            new StockDto("UDR", "UDR, Inc."),
+            new StockDto("UHS", "Universal Health Services"),
+            new StockDto("ULTA", "Ulta Beauty"),
+            new StockDto("UNH", "UnitedHealth Group"),
+            new StockDto("UNP", "Union Pacific Corporation"),
+            new StockDto("UPS", "United Parcel Service"),
+            new StockDto("URI", "United Rentals"),
+            new StockDto("USB", "U.S. Bancorp"),
+            new StockDto("V", "Visa Inc."),
+            new StockDto("VICI", "Vici Properties"),
+            new StockDto("VLO", "Valero Energy"),
+            new StockDto("VLTO", "Veralto"),
+            new StockDto("VMC", "Vulcan Materials Company"),
+            new StockDto("VRSK", "Verisk Analytics"),
+            new StockDto("VRSN", "Verisign"),
+            new StockDto("VRTX", "Vertex Pharmaceuticals"),
+            new StockDto("VST", "Vistra Corp."),
+            new StockDto("VTR", "Ventas"),
+            new StockDto("VTRS", "Viatris"),
+            new StockDto("VZ", "Verizon"),
+            new StockDto("WAB", "Wabtec"),
+            new StockDto("WAT", "Waters Corporation"),
+            new StockDto("WBD", "Warner Bros. Discovery"),
+            new StockDto("WDAY", "Workday, Inc."),
+            new StockDto("WDC", "Western Digital"),
+            new StockDto("WEC", "WEC Energy Group"),
+            new StockDto("WELL", "Welltower"),
+            new StockDto("WFC", "Wells Fargo"),
+            new StockDto("WM", "Waste Management"),
+            new StockDto("WMB", "Williams Companies"),
+            new StockDto("WMT", "Walmart"),
+            new StockDto("WRB", "W. R. Berkley Corporation"),
+            new StockDto("WSM", "Williams-Sonoma, Inc."),
+            new StockDto("WST", "West Pharmaceutical Services"),
+            new StockDto("WTW", "Willis Towers Watson"),
+            new StockDto("WY", "Weyerhaeuser"),
+            new StockDto("WYNN", "Wynn Resorts"),
+            new StockDto("XEL", "Xcel Energy"),
+            new StockDto("XOM", "ExxonMobil"),
+            new StockDto("XYL", "Xylem Inc."),
+            new StockDto("XYZ", "Block, Inc."),
+            new StockDto("YUM", "Yum! Brands"),
+            new StockDto("ZBH", "Zimmer Biomet"),
+            new StockDto("ZBRA", "Zebra Technologies"),
+            new StockDto("ZS", "Zscaler"),
+            new StockDto("ZTS", "Zoetis")
+        );
+
+        private static final Map<String, YahooPeriodSpec> PERIOD_MAP = Map.of(
+            "1h", new YahooPeriodSpec("1d", "1m"),
+            "1d", new YahooPeriodSpec("1d", "5m"),
+            "3m", new YahooPeriodSpec("3mo", "1d"),
+            "1y", new YahooPeriodSpec("1y", "1d"),
+            "max", new YahooPeriodSpec("max", "1mo")
+        );
+
+    private final HttpClient httpClient;
+    private final ObjectMapper objectMapper;
+
+    public NasdaqStocksService(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(8))
+                .build();
+    }
+
+    public List<StockDto> listNasdaqStocks() {
+        return NASDAQ_STOCKS;
+    }
+
+    public StockHistoryDto getHistory(String symbol, String period) {
+        String normalizedSymbol = normalize(symbol).toUpperCase();
+        String normalizedPeriod = normalize(period).toLowerCase();
+
+        if (normalizedSymbol.isBlank()) {
+            throw new ResponseStatusException(BAD_REQUEST, "Symbol is required");
+        }
+
+        YahooPeriodSpec spec = PERIOD_MAP.get(normalizedPeriod);
+        if (spec == null) {
+            throw new ResponseStatusException(BAD_REQUEST, "Unsupported period. Use one of: 1h, 1d, 3m, 1y, max");
+        }
+
+        try {
+            String url = "https://query1.finance.yahoo.com/v8/finance/chart/"
+                    + URLEncoder.encode(normalizedSymbol, StandardCharsets.UTF_8)
+                    + "?range=" + spec.range() + "&interval=" + spec.interval();
+
+            HttpRequest req = HttpRequest.newBuilder(URI.create(url))
+                    .GET()
+                    .timeout(Duration.ofSeconds(10))
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36")
+                    .header("Accept", "application/json")
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 404) {
+                // Return empty history if symbol is not found (delisted, renamed, etc.)
+                return new StockHistoryDto(normalizedSymbol, normalizedPeriod, List.of());
+            }
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                System.err.println("Yahoo API Error (" + response.statusCode() + "): " + response.body());
+                throw new ResponseStatusException(BAD_GATEWAY, "Cannot load stock data from provider. Status: " + response.statusCode());
+            }
+
+            JsonNode root = objectMapper.readTree(response.body());
+            JsonNode result = root.path("chart").path("result");
+            if (!result.isArray() || result.isEmpty()) {
+                throw new ResponseStatusException(BAD_GATEWAY, "Provider returned no data");
+            }
+
+            JsonNode first = result.get(0);
+            JsonNode ts = first.path("timestamp");
+            JsonNode close = first.path("indicators").path("quote").path(0).path("close");
+
+            if (!ts.isArray() || !close.isArray()) {
+                throw new ResponseStatusException(BAD_GATEWAY, "Provider returned invalid format");
+            }
+
+            int len = Math.min(ts.size(), close.size());
+            List<StockPricePointDto> points = java.util.stream.IntStream.range(0, len)
+                    .mapToObj(i -> {
+                        JsonNode c = close.get(i);
+                        if (c == null || c.isNull() || !c.isNumber()) {
+                            return null;
+                        }
+                        return new StockPricePointDto(ts.get(i).asLong() * 1000L, c.asDouble());
+                    })
+                    .filter(p -> p != null)
+                    .toList();
+
+            List<StockPricePointDto> adjusted = points;
+            if ("1h".equals(normalizedPeriod) && points.size() > 60) {
+                adjusted = points.subList(points.size() - 60, points.size());
+            }
+
+            adjusted = adjusted.stream()
+                    .sorted(Comparator.comparingLong(StockPricePointDto::timestamp))
+                    .toList();
+
+            return new StockHistoryDto(normalizedSymbol, normalizedPeriod, adjusted);
+        } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            throw new ResponseStatusException(BAD_GATEWAY, "Failed to fetch stock data", e);
+        }
+    }
+
+    private String normalize(String input) {
+        if (input == null) {
+            return "";
+        }
+        return input.trim();
+    }
+
+    private record YahooPeriodSpec(String range, String interval) {
+    }
+}

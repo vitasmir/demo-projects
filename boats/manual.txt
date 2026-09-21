@@ -1,0 +1,14 @@
+sudo apt-get install sqlite3
+
+locale -a | grep cs_CZ
+sudo locale-gen cs_CZ.UTF-8
+sudo update-locale
+
+cs_CZ.UTF-8
+
+sudo apt install php-intl
+
+TO RUN USE THIS COMMAND
+php -S localhost:8080 -t .
+
+

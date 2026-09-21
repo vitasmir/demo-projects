@@ -1,0 +1,105 @@
+
+services:
+  
+  listek-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: listek-backend
+    networks:
+      - projects-network
+    environment:
+      SPRING_DATASOURCE_URL: ${DB_URL:?Use docker-compose-vault.sh to start the stack}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:?Use docker-compose-vault.sh to start the stack}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?Use docker-compose-vault.sh to start the stack}
+      SPRING_CLOUD_VAULT_TOKEN: ${VAULT_TOKEN:?Use docker-compose-vault.sh to start the stack}
+      SPRING_CLOUD_VAULT_URI: ${SPRING_CLOUD_VAULT_URI:-http://host.docker.internal:8200}
+      SERVER_PORT: 8080
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/api/v1/health >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    ports:
+      - "8080:8080"
+
+  listek-frontend:
+    build:
+      context: ../listek-frontend
+      dockerfile: Dockerfile
+      args:
+        BACKEND_URL: http://listek-backend:8080
+        ADMIN_BACKEND_URL: http://listek-admin:8090
+    container_name: listek-frontend
+    environment:
+      BACKEND_URL: http://listek-backend:8080
+      ADMIN_BACKEND_URL: http://listek-admin:8090
+    depends_on:
+      listek-backend:
+        condition: service_healthy
+        restart: true
+      listek-admin:
+        condition: service_healthy
+        restart: true
+    ports:
+      - "3000:3000"
+    networks:
+      - projects-network
+
+
+  listek-admin:
+    build:
+      context: ../listek-admin
+      dockerfile: Dockerfile
+    container_name: listek-admin
+    environment:
+      SPRING_DATASOURCE_URL: ${DB_URL:?Use docker-compose-vault.sh to start the stack}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:?Use docker-compose-vault.sh to start the stack}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?Use docker-compose-vault.sh to start the stack}
+      SPRING_CLOUD_VAULT_TOKEN: ${VAULT_TOKEN:?Use docker-compose-vault.sh to start the stack}
+      SPRING_CLOUD_VAULT_URI: ${SPRING_CLOUD_VAULT_URI:-http://host.docker.internal:8200}
+      SERVER_PORT: 8090
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      listek-backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sS http://localhost:8090/api/admin/health >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    ports:
+      - "8090:8090"
+    networks:
+      - projects-network
+
+  listek-manager:
+    build:
+      context: ../listek-manager
+      dockerfile: Dockerfile
+      args:
+        ADMIN_BACKEND_URL: http://listek-admin:8090
+    container_name: listek-manager
+    environment:
+      ADMIN_BACKEND_URL: http://listek-admin:8090
+    depends_on:
+      listek-admin:
+        condition: service_healthy
+    ports:
+      - "3001:3000"
+    networks:
+      - projects-network
+
+
+
+
+
+
+networks:
+  projects-network:
+    external: true

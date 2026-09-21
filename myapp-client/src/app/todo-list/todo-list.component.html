@@ -1,0 +1,68 @@
+<div>
+
+    <button type="button" name="Add" (click)="addTodo()">Add todo item</button>
+
+</div>
+@if (divs) {
+<div class="container">
+    <div class="row borderedDiv">
+        <div class="col borderedDiv">Title</div>
+        <div class="col borderedDiv">Note</div>
+        <div class="col borderedDiv">Action</div>
+    </div>
+    @for (todo of todos; track todo.id) {
+    <div class="row border">
+
+        <div class="col border">
+            <label>{{ todo.title }}</label>
+        </div>
+        <div class="col border">
+            <label>{{ todo.note }}</label>
+        </div>
+        <div class="col border">
+            <button class="btn btn-primary" (click)="onDelete(todo.id)">Solve</button>
+            <button class="btn btn-warning" (click)="onEdit(todo.id)">Edit</button>
+        </div>
+    </div>
+    }
+</div>
+} @else {
+<table class="container">
+    <thead class="borderedDiv">
+        <tr>
+            <th>Title</th>
+            <th>Note</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @for (todo2 of todos; track todo2.id) {
+        <tr>
+            <td>
+                <label>{{ todo2.title }}</label>
+            </td>
+            <td>
+                <label>{{ todo2.note }}</label>
+            </td>
+            <td>
+                <button class="btn btn-primary" (click)="onDelete(todo2.id)">Solve</button>
+                <button class="btn btn-warning" (click)="onEdit(todo2.id)">Edit</button>
+            </td>
+
+        </tr>
+        }
+    </tbody>
+</table>
+}
+
+<h1>Choose components used:</h1>
+
+<h2>
+    <label>DIVs
+        <input type="radio" (change)="showDivs()" checked="checked" name="divs">
+    </label>
+    <br />
+    <label>HTML Table
+        <input type="radio" (change)="showTable()" name="divs">
+    </label>
+</h2>

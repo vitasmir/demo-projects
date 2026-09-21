@@ -1,0 +1,108 @@
+.tablinks {
+    padding: 10px;
+    width: 200px;
+
+}
+
+.nav-item {
+    padding: 10px;
+    width: 200px;
+    text-decoration: underline;
+    color: black;
+}
+
+.nav-column {
+    max-height: 100vh;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+.content-column {
+    max-height: 100vh;
+    overflow-y: auto;
+    padding-left: 1rem;
+    scrollbar-width: auto;
+    scrollbar-color: #7f8ea3 #e6ebf2;
+}
+
+.content-column::-webkit-scrollbar {
+    width: 1.2rem;
+}
+
+.content-column::-webkit-scrollbar-track {
+    background: #e6ebf2;
+}
+
+.content-column::-webkit-scrollbar-thumb {
+    background: #7f8ea3;
+    border-radius: 999px;
+    border: 3px solid #e6ebf2;
+}
+
+.content-column::-webkit-scrollbar-thumb:hover {
+    background: #5f6d80;
+}
+
+.row {
+    min-height: 100vh;
+}
+
+.active {
+    background-color: rgb(226, 43, 61);
+}
+
+button.active,
+button.btn.active,
+button.btn-primary.active {
+    background-color: rgb(226, 43, 61) !important;
+    border-color: rgb(226, 43, 61) !important;
+    color: white !important;
+}
+
+button {
+    font-size: 1.2rem;
+    padding: 5px 5px;
+}
+
+button[routerLink] {
+    width: 200px;
+}
+
+.logout-button,
+.logout-button:hover,
+.logout-button:focus,
+.logout-button:active {
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+    color: #fff !important;
+}
+
+.bottom-nav-button {
+    background-color: #198754 !important;
+    border-color: #198754 !important;
+    color: #fff !important;
+}
+
+.bottom-nav-button:hover {
+    background-color: #157347 !important;
+    border-color: #146c43 !important;
+}
+
+dialog::backdrop {
+    background-color: salmon;
+}
+
+::backdrop {
+    background-image: linear-gradient(45deg,
+            magenta,
+            rebeccapurple,
+            dodgerblue,
+            green);
+    opacity: 0.75;
+}
+
+.auth-blank-screen {
+    min-height: 100vh;
+    width: 100%;
+    background: #fff;
+}

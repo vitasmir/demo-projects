@@ -1,0 +1,27 @@
+.boat-admin-page {
+  display: block;
+}
+
+.page-header {
+  border-left: 5px solid #0d6efd;
+}
+
+.boat-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.boat-list-item {
+  display: flex;
+}
+
+.boat-badge {
+  background: #e9f2ff;
+  color: #084298;
+  border: 1px solid #b6d4fe;
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  font-weight: 600;
+}

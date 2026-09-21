@@ -1,0 +1,35 @@
+<form #userForm="ngForm" (ngSubmit)="onSubmit(userForm)">
+  <div class="container">
+    <h2>{{ data.mode === 'edit' ? 'Edit User' : 'Add User' }}</h2>
+    <div class=" mb-2">
+      <label for="firstName">First Name</label>
+      <input id="firstName" matInput [(ngModel)]="userObject.firstName" class="form-control" #firstName="ngModel"
+        name="firstName" required>
+    </div>
+    <div class=" mb-2">
+      <label for="lastName">Last Name</label>
+      <input id="lastName" matInput [(ngModel)]="userObject.lastName" class="form-control" #lastName="ngModel"
+        name="lastName" required>
+    </div>
+    <div class=" mb-2">
+      <label for="username">Username</label>
+      <input id="username" matInput class="form-control" [(ngModel)]="userObject.username" #username="ngModel"
+        name="username" required>
+    </div>
+    <div class=" mb-2">
+      <label for="email">Email</label>
+      <input id="email" matInput class="form-control" [(ngModel)]="userObject.email" #email="ngModel" name="email"
+        required>
+    </div>
+    <div class=" mb-2">
+      <label for="age">Age</label>
+      <input id="age" matInput class="form-control" [(ngModel)]="userObject.age" #age="ngModel" name="age" required>
+    </div>
+    <input id="id" type="hidden" [(ngModel)]="userObject.id" #id="ngModel" name="id" />
+    <div class="mt-3">
+      <button type="submit" class="btn btn-primary" (click)="onSubmit(userForm)"
+        [disabled]="!userForm.valid">Save</button>
+      <button type="button" class="btn btn-secondary me-2" (click)="onCancel()">Cancel</button>
+    </div>
+  </div>
+</form>

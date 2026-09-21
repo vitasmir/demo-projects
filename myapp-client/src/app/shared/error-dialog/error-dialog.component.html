@@ -1,0 +1,13 @@
+<div class="modal-content custom-dialog-container light-pink-background">
+    <div class="modal-header">
+        <h5 class="modal-title" *ngIf="data.title">{{ data.title }}</h5>
+    </div>
+    <div class="modal-body">
+        <p>{{ data.message }}</p>
+    </div>
+    <div class="modal-footer">
+
+        <button type="button" (click)="onConfirm()">{{ data.confirmText || 'Confirm'
+            }}</button>
+    </div>
+</div>

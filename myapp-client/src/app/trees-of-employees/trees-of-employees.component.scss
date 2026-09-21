@@ -1,0 +1,289 @@
+.example-tree-invisible {
+    display: none;
+}
+
+.employee-tree-panel mat-tree ul,
+.employee-tree-panel mat-tree li {
+    margin: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    list-style-type: none;
+}
+
+.employee-tree-panel mat-tree ul {
+    padding-left: 40px;
+}
+
+.employee-tree-panel mat-tree li {
+    padding-right: 0;
+}
+
+.employee-tree-header {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.employee-tree-header h2 {
+    margin: 0;
+}
+
+.employee-tree-panel {
+    border: 1px solid #d7e7ff;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    padding: 12px;
+}
+
+.tree-surface {
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: 8px;
+}
+
+.upper-tree-surface {
+    border: 1px solid #d7e7ff;
+    border-radius: 6px;
+    max-height: min(42vh, 420px);
+}
+
+.source-tree-panel {
+    background: #ffffff;
+}
+
+.destination-tree-panel {
+    background: #f7fbff;
+}
+
+.tree-panel-heading {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.tree-panel-heading h3 {
+    margin: 0;
+}
+
+.tree-panel-heading span,
+.empty-tree-message {
+    color: #667085;
+    margin: 0;
+}
+
+.empty-tree-message {
+    padding: 16px 4px 4px;
+}
+
+.lower-tree-surface {
+    background: #ffffff;
+    border: 1px dashed #b8c7dd;
+    border-radius: 6px;
+    min-height: 132px;
+    max-height: min(42vh, 420px);
+}
+
+.undo-button {
+    font-weight: 700;
+    min-width: 88px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.redo-button {
+    font-weight: 700;
+    min-width: 88px;
+    background-color: #198754;
+    color: #fff;
+    border: 1px solid #198754;
+}
+
+.redo-button:not([disabled]):hover {
+    background-color: #157347;
+}
+
+.employee-search {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    max-width: 560px;
+}
+
+.tree-node-toggle {
+    align-items: center;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    color: #344054;
+    display: inline-flex;
+    height: 28px;
+    justify-content: center;
+    margin-right: 4px;
+    min-width: 28px;
+    width: 28px;
+}
+
+.tree-node-toggle-symbol {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.tree-node-spacer {
+    display: inline-block;
+    height: 28px;
+    margin-right: 4px;
+    width: 28px;
+}
+
+.employee-tree-node {
+    border-left: 4px solid #198754;
+    border-radius: 6px;
+    gap: 8px;
+    min-height: 44px;
+    padding-left: 6px;
+    padding-right: 8px;
+}
+
+.employee-tree-node .employee-name {
+    overflow-wrap: anywhere;
+}
+
+.employee-tree-node.manager-node {
+    background-color: #f2f7ff;
+    border-left-color: #6f42c1;
+    box-shadow: inset 0 0 0 1px #d7e7ff;
+}
+
+.employee-tree-node.selected {
+    background-color: #e6f0ff;
+    box-shadow: inset 0 0 0 2px #7eb3ff;
+}
+
+.employee-tree-node.selected-target-manager {
+    background-color: #f0e8ff;
+    box-shadow: inset 0 0 0 2px #8b5cf6;
+}
+
+.destination-tree-panel .employee-tree-node.lower-search-match {
+    background-color: #cfe8ff;
+}
+
+.lower-tree-node {
+    border-left-color: #6f42c1;
+}
+
+.employee-node-label {
+    align-items: baseline;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 16px;
+    font-weight: 700;
+    gap: 6px;
+    padding: 4px 8px;
+    text-align: left;
+}
+
+.employee-position {
+    font: inherit;
+}
+
+.employee-node-label:hover {
+    text-decoration: underline;
+}
+
+.employee-node-label:disabled {
+    color: inherit;
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+.move-actions {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.move-action {
+    white-space: nowrap;
+}
+
+.move-toolbar-button {
+    background-color: #8ecae6;
+    border: 1px solid #6fb9dc;
+    color: #123047;
+}
+
+.move-toolbar-button:not([disabled]):hover {
+    background-color: #74b9dc;
+    border-color: #5aa9cf;
+    color: #102a3d;
+}
+
+.move-toolbar-button[disabled] {
+    background-color: #c6e5f3;
+    border-color: #abd6e9;
+    color: #5c7d8e;
+    opacity: 1;
+}
+
+@media (max-width: 768px) {
+    .employee-tree-header,
+    .tree-panel-heading,
+    .employee-search {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .tree-surface,
+    .lower-tree-surface {
+        max-height: 34vh;
+    }
+
+    .employee-tree-node {
+        align-items: flex-start;
+        flex-wrap: wrap;
+        padding-bottom: 6px;
+        padding-top: 6px;
+    }
+
+    .move-actions {
+        margin-left: 32px;
+        width: calc(100% - 32px);
+    }
+}
+
+/* Make action buttons visually prominent immediately (not only on hover) */
+.move-actions .move-action:not([disabled]) {
+    background-color: #0d6efd;
+    color: #ffffff;
+    border: 1px solid #0d6efd;
+    box-shadow: 0 1px 2px rgba(13,110,253,0.2);
+}
+
+.move-actions .move-action:not([disabled]):hover {
+    background-color: #0b5ed7;
+    border-color: #0b5ed7;
+}
+
+/* Make the UNDO button more prominent when enabled */
+.undo-button:not([disabled]) {
+    background-color: #ffc107;
+    color: #000;
+    border: 1px solid #ffc107;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+
+.undo-button:not([disabled]):hover {
+    background-color: #e0a800;
+    border-color: #d39e00;
+}

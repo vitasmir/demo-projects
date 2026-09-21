@@ -1,0 +1,59 @@
+<div class="boat-admin-page">
+  <div class="page-header card shadow-sm p-4 mb-4">
+    <div>
+      <h2 class="mb-2">Administrace půjčovny loděk</h2>
+      <p class="text-muted mb-0">Tato sekce je oddělená od uživatelského kalendáře. Slouží pro správu loděk a provozního času půjčování.</p>
+    </div>
+  </div>
+
+  <div *ngIf="successMessage" class="alert alert-success">{{ successMessage }}</div>
+  <div *ngIf="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+
+  <div *ngIf="loading" class="card shadow-sm p-5 text-center">
+    <div class="spinner-border mx-auto" role="status"></div>
+  </div>
+
+  <ng-container *ngIf="!loading && overview as adminOverview">
+    <div class="row g-4">
+      <div class="col-xl-6">
+        <div class="card shadow-sm p-4 h-100">
+          <h4 class="mb-3">Nastavení půjčování</h4>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Od</label>
+              <select class="form-select" [(ngModel)]="adminOverview.settings.dayStartTime">
+                <option *ngFor="let time of timeOptions; trackBy: trackByTime" [ngValue]="time">{{ time }}</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Do</label>
+              <select class="form-select" [(ngModel)]="adminOverview.settings.dayEndTime">
+                <option *ngFor="let time of timeOptions; trackBy: trackByTime" [ngValue]="time">{{ time }}</option>
+              </select>
+            </div>
+          </div>
+          <p class="text-muted mt-3 mb-3">Délka jedné výpůjčky je pevně nastavena na {{ adminOverview.settings.slotDurationMinutes }} minut.</p>
+          <button class="btn btn-primary align-self-start" type="button" (click)="saveSettings()">Uložit nastavení</button>
+        </div>
+      </div>
+
+      <div class="col-xl-6">
+        <div class="card shadow-sm p-4 h-100">
+          <h4 class="mb-3">Správa loděk</h4>
+          <label class="form-label">Nová lodka</label>
+          <div class="input-group mb-3">
+            <input class="form-control" [(ngModel)]="newBoatName" />
+            <button class="btn btn-outline-primary" type="button" (click)="addBoat()">Přidat lodku</button>
+          </div>
+          <p class="text-muted">Doporučené pojmenování pro budoucí lodě: {{ adminOverview.suggestedBoatName }}</p>
+
+          <div class="boat-list">
+            <div class="boat-list-item" *ngFor="let boat of adminOverview.boats; trackBy: trackByBoatId">
+              <span class="boat-badge">{{ boat.name }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>

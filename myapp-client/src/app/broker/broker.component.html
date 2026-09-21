@@ -1,0 +1,244 @@
+<div class="xtb-dashboard">
+  
+  <!-- Left Sidebar: Instruments -->
+  <div class="xtb-sidebar">
+    <div class="sidebar-header">
+      Instrumenty
+    </div>
+    <div class="stock-list">
+      <div class="stock-item" 
+           *ngFor="let stock of stocks" 
+           [class.active]="selectedStock?.symbol === stock.symbol"
+           (click)="selectStock(stock)">
+        <div class="symbol">{{ stock.symbol }}</div>
+        <div class="name">{{ stock.name | slice:0:15 }}{{ stock.name.length > 15 ? '...' : '' }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Center Main: Chart & Orderbook -->
+  <div class="xtb-main">
+    <div class="xtb-toolbar" *ngIf="selectedStock">
+      <div class="symbol-title">{{ selectedStock.symbol }} - {{ selectedStock.name }}</div>
+      
+      <div class="period-toggles">
+        <button [class.active]="selectedPeriod === '1h'" (click)="setPeriod('1h')">1H</button>
+        <button [class.active]="selectedPeriod === '1d'" (click)="setPeriod('1d')">1D</button>
+        <button [class.active]="selectedPeriod === '3m'" (click)="setPeriod('3m')">3M</button>
+        <button [class.active]="selectedPeriod === '1y'" (click)="setPeriod('1y')">1Y</button>
+      </div>
+
+      <div class="chart-type-toggles">
+        <button [class.active]="selectedChartType === 'line'" (click)="setChartType('line')">Line</button>
+        <button [class.active]="selectedChartType === 'candles'" (click)="setChartType('candles')">Candles</button>
+      </div>
+
+      <div class="live-indicator" [class.disconnected]="!liveConnected">
+        <span class="live-dot"></span>
+        {{ liveConnected ? 'LIVE WS' : 'RECONNECT' }}
+      </div>
+
+      <div style="flex:1"></div>
+      <div style="color: #8b929c; font-size: 13px;">Poslední cena: <span style="color:#fff; font-weight:bold;">{{ lastPrice | number:'1.2-2' }}</span></div>
+    </div>
+
+    <div class="chart-metrics" *ngIf="selectedStock && points.length">
+      <div class="metric-card">
+        <span>Open</span>
+        <strong>{{ firstPrice | number:'1.2-2' }}</strong>
+      </div>
+      <div class="metric-card">
+        <span>High</span>
+        <strong>{{ maxPrice | number:'1.2-2' }}</strong>
+      </div>
+      <div class="metric-card">
+        <span>Low</span>
+        <strong>{{ minPrice | number:'1.2-2' }}</strong>
+      </div>
+      <div class="metric-card">
+        <span>Změna</span>
+        <strong [class.price-up]="priceChange >= 0" [class.price-down]="priceChange < 0">
+          {{ priceChange | number:'1.2-2' }} ({{ priceChangePercent | number:'1.2-2' }}%)
+        </strong>
+      </div>
+      <div class="metric-card">
+        <span>Čas</span>
+        <strong>{{ formatDateTime(lastTimestamp) }}</strong>
+      </div>
+    </div>
+
+    <div class="xtb-chart" #chartContainer>
+      <div class="chart-stage" #chartStage>
+        <svg
+          [attr.viewBox]="'0 0 ' + chartWidth + ' ' + chartHeight"
+          class="price-chart"
+          preserveAspectRatio="none"
+          (mousemove)="onChartMouseMove($event, chartSvg)"
+          (mouseleave)="onChartMouseLeave()"
+          #chartSvg>
+          <defs>
+            <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#00b85c" stop-opacity="0.3" />
+              <stop offset="100%" stop-color="#00b85c" stop-opacity="0" />
+            </linearGradient>
+          </defs>
+
+          <g *ngIf="points.length">
+            <line
+              [attr.x1]="chartPaddingLeft"
+              [attr.y1]="chartPaddingTop"
+              [attr.x2]="chartPaddingLeft"
+              [attr.y2]="plotEndY"
+              class="chart-axis-line"></line>
+            <line
+              [attr.x1]="chartPaddingLeft"
+              [attr.y1]="plotEndY"
+              [attr.x2]="plotEndX"
+              [attr.y2]="plotEndY"
+              class="chart-axis-line"></line>
+
+            <line
+              *ngFor="let tick of yAxisTicks"
+              [attr.x1]="chartPaddingLeft"
+              [attr.y1]="getYAxisPosition(tick.topPercent)"
+              [attr.x2]="plotEndX"
+              [attr.y2]="getYAxisPosition(tick.topPercent)"
+              class="chart-grid-line"></line>
+
+            <text
+              *ngFor="let tick of yAxisTicks"
+              [attr.x]="chartPaddingLeft - 10"
+              [attr.y]="getYAxisPosition(tick.topPercent) + 4"
+              text-anchor="end"
+              class="chart-axis-text">
+              {{ tick.label }}
+            </text>
+
+            <text
+              *ngFor="let tick of xAxisTicks"
+              [attr.x]="getXAxisPosition(tick.leftPercent)"
+              [attr.y]="chartHeight - 4"
+              text-anchor="middle"
+              class="chart-axis-text">
+              {{ tick.label }}
+            </text>
+          </g>
+
+          <ng-container *ngIf="selectedChartType === 'line'; else candleChart">
+            <path [attr.d]="chartFillPath" fill="url(#chartGrad)"></path>
+            <path [attr.d]="chartPath" fill="none" stroke="#00b85c" stroke-width="2"></path>
+          </ng-container>
+
+          <ng-template #candleChart>
+            <g *ngFor="let candle of candlesticks">
+              <line
+                [attr.x1]="candle.x"
+                [attr.y1]="candle.wickTop"
+                [attr.x2]="candle.x"
+                [attr.y2]="candle.wickBottom"
+                [attr.class]="candle.bullish ? 'candle-wick bullish' : 'candle-wick bearish'"></line>
+              <rect
+                [attr.x]="candle.x - candle.width / 2"
+                [attr.y]="candle.bodyTop"
+                [attr.width]="candle.width"
+                [attr.height]="candle.bodyHeight"
+                [attr.rx]="1"
+                [attr.class]="candle.bullish ? 'candle-body bullish' : 'candle-body bearish'"></rect>
+            </g>
+          </ng-template>
+
+          <g *ngIf="points.length && selectedChartType === 'line'">
+            <circle [attr.cx]="lastPointX" [attr.cy]="lastPointY" r="4" class="last-point-marker"></circle>
+          </g>
+
+          <g *ngIf="hoveredPoint">
+            <line [attr.x1]="hoverX" [attr.x2]="hoverX" [attr.y1]="chartPaddingTop" [attr.y2]="plotEndY" class="hover-line"></line>
+            <circle [attr.cx]="hoverX" [attr.cy]="hoverY" r="5" class="hover-point"></circle>
+          </g>
+        </svg>
+
+        <div
+          class="chart-tooltip"
+          *ngIf="hoveredPoint"
+          [style.left.px]="tooltipLeft"
+          [style.top.px]="tooltipTop">
+          <div class="tooltip-price">{{ formatPrice(hoveredPoint.price) }} USD</div>
+          <div class="tooltip-time">{{ formatDateTime(hoveredPoint.timestamp) }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom: Orderbook (Market Depth) -->
+    <div class="xtb-orderbook">
+      <!-- Bids (Kupci) -->
+      <div class="book-section bids">
+        <div class="book-header green">
+          <span>Kupci (Bids)</span>
+          <span>Objem / Cena</span>
+        </div>
+        <div class="book-table">
+          <div class="book-row" *ngFor="let bid of bids">
+            <span style="color: #8b929c">{{ bid.quantity }} ks</span>
+            <span style="color: #00b85c; font-weight: bold;">{{ bid.price | number:'1.2-2' }}</span>
+          </div>
+          <div *ngIf="bids.length === 0" style="padding: 10px 15px; color: #5d636b; text-align:center;">Žádné nabídky</div>
+        </div>
+      </div>
+
+      <!-- Asks (Prodejci) -->
+      <div class="book-section asks">
+        <div class="book-header red">
+          <span>Prodejci (Asks)</span>
+          <span>Cena / Objem</span>
+        </div>
+        <div class="book-table">
+          <div class="book-row" *ngFor="let ask of asks">
+            <span style="color: #f03030; font-weight: bold;">{{ ask.price | number:'1.2-2' }}</span>
+            <span style="color: #8b929c">{{ ask.quantity }} ks</span>
+          </div>
+          <div *ngIf="asks.length === 0" style="padding: 10px 15px; color: #5d636b; text-align:center;">Žádné nabídky</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Panel: Order Ticket -->
+  <div class="xtb-order-panel">
+    <div class="panel-header">Nový pokyn</div>
+    
+    <div class="new-order-form">
+      <div class="form-group">
+        <label>Typ pokynu</label>
+        <div style="display:flex; background: #121415; border-radius: 4px; padding: 2px;">
+          <div style="flex:1; text-align:center; padding: 8px; border-radius: 3px; font-size: 13px; font-weight:bold; background: #293140; color: #00b85c;">Limit (Čekající)</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Objem (ks)</label>
+        <input type="number" [(ngModel)]="orderQuantity" placeholder="1" min="1" step="1" />
+      </div>
+
+      <div class="form-group">
+        <label>Cena (Limitní)</label>
+        <input type="number" [(ngModel)]="orderPrice" placeholder="Zadejte cenu" min="0" step="0.01" />
+      </div>
+
+      <div class="action-buttons">
+        <button class="btn-sell" (click)="placeLimitOrder('SELL')">
+          <span>SELL LIMIT</span>
+          {{ orderPrice || 0 | number:'1.2-2' }}
+        </button>
+        <button class="btn-buy" (click)="placeLimitOrder('BUY')">
+          <span>BUY LIMIT</span>
+          {{ orderPrice || 0 | number:'1.2-2' }}
+        </button>
+      </div>
+
+      <div style="margin-top: 20px; font-size: 12px; color: #8b929c; line-height: 1.5;">
+        Váš pokyn projde okamžitě, pokud se na trhu nachází protistrana s požadovanou cenou. Jinak bude zařazen do čekající knihy (Orderbook).
+      </div>
+    </div>
+  </div>
+
+</div>

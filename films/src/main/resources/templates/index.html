@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>File Search</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="" crossorigin="anonymous">
+    <style>
+        body { font-family: sans-serif; }
+        .search-box { margin-bottom: 20px; }
+        input[type="text"] { padding: 8px; width: 300px; }
+        button { padding: 8px 8px; }
+        table { margin-top: 20px; }
+        th, td { padding: 8px; text-align: left; }
+        .autocomplete-suggestions {
+            border: 1px solid #ccc;
+            border-top: none;
+            max-height: 550px;
+            overflow-y: auto;
+            position: absolute;
+            background-color: rgb(222, 221, 218);
+            z-index: 1000;
+            width: 500px; /* Match input width */
+        }
+        .autocomplete-suggestion {
+            padding: 8px;
+            cursor: pointer;
+        }
+        .autocomplete-suggestion:hover, .autocomplete-suggestion.highlighted {
+            background-color: rgba(8, 241, 225, 0.252);
+        }
+        .autocomplete-suggestion mark {
+            background-color: rgba(255, 235, 59, 0.6);
+            font-weight: 600;
+            color: inherit;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container py-4">
+        <h2>File Search Engine</h2>
+
+        <div class="search-box">
+            <form action="/" method="get" class="row g-2 align-items-center" id="search-form">
+                <div class="col-auto">
+                    <input type="text" name="q" th:value="${lastQuery}" autocomplete="off" placeholder="Type filename..." class="form-control" id="search-input" />
+                    <div id="autocomplete-suggestions" class="autocomplete-suggestions"></div>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </div>
+                <div class="col-auto">
+                    <a href="/" th:if="${lastQuery != null}" class="btn btn-link">Clear</a>
+                </div>
+            </form>
+        </div>
+
+        <hr/>
+
+        <div th:if="${files != null}">
+            <div th:if="${not #lists.isEmpty(files)}">
+                <h3>Found <span th:text="${files.size()}">0</span> results:</h3>
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered">
+                        <thead>
+                            <tr>
+                                <th style="width: 52px"></th>
+                                <th>File name</th>
+                                <th>File path</th>
+                                <th class="d-none d-md-table-cell">Size</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="file : ${files}">
+                                <td class="align-middle">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" th:attr="data-path=${file.path}" onclick="copyPath(this)" title="Copy path">📋</button>
+                                </td>
+                                <td class="align-middle"><span th:text="${file.name}">Name</span></td>
+                                <td class="align-middle"><span th:text="${file.path}">Path</span></td>
+                                <td class="d-none d-md-table-cell" th:text="${file.size}">Size</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div th:if="${#lists.isEmpty(files)}">
+                <p>No files found matching "<b><span th:text="${lastQuery}"></span></b>"</p>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        function copyPath(btn){
+            var path = btn.getAttribute('data-path');
+            if(!path) return;
+            if(navigator.clipboard && navigator.clipboard.writeText){
+                navigator.clipboard.writeText(path).then(function(){
+                    var old = btn.innerText;
+                    btn.innerText = '✓';
+                    setTimeout(function(){ btn.innerText = old; }, 100);
+                }).catch(function(){});
+            } else {
+                var ta = document.createElement('textarea');
+                ta.value = path;
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); btn.innerText = '✓'; } catch(e){}
+                document.body.removeChild(ta);
+                setTimeout(function(){ btn.innerText = '📋'; }, 1000);
+            }
+        }
+
+        const searchInput = document.getElementById('search-input');
+        const suggestionsContainer = document.getElementById('autocomplete-suggestions');
+        const searchForm = document.getElementById('search-form');
+        let timeoutId;
+        let highlightedIndex = -1;
+
+        function highlightMatch(text, query) {
+            const fragment = document.createDocumentFragment();
+            if (!query) {
+                fragment.appendChild(document.createTextNode(text));
+                return fragment;
+            }
+            // split query into keywords, escape regex chars, and prefer longer tokens
+            const tokens = query
+                .trim()
+                .split(/\s+/)
+                .filter(Boolean)
+                .map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+            if (tokens.length === 0) {
+                fragment.appendChild(document.createTextNode(text));
+                return fragment;
+            }
+            // sort tokens by length desc to avoid partial matches overriding longer ones
+            tokens.sort((a, b) => b.length - a.length);
+            const re = new RegExp('(' + tokens.join('|') + ')', 'ig');
+
+            let lastIndex = 0;
+            let m;
+            while ((m = re.exec(text)) !== null) {
+                const idx = m.index;
+                if (idx > lastIndex) {
+                    fragment.appendChild(document.createTextNode(text.substring(lastIndex, idx)));
+                }
+                const mark = document.createElement('mark');
+                mark.textContent = m[0];
+                fragment.appendChild(mark);
+                lastIndex = idx + m[0].length;
+                // avoid infinite loops for zero-length matches
+                if (re.lastIndex === idx) re.lastIndex++;
+            }
+            if (lastIndex < text.length) {
+                fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+            }
+            return fragment;
+        }
+
+        function selectSuggestion(suggestion) {
+            searchInput.value = suggestion;
+            suggestionsContainer.innerHTML = '';
+            highlightedIndex = -1;
+            // set selected film name and submit the form
+            const matchedElement = document.createElement('input');
+            matchedElement.type = 'hidden';
+            matchedElement.name = 'fullFilmFileName';
+            matchedElement.value = suggestion;
+            searchForm.appendChild(matchedElement);
+            searchForm.submit();
+        }
+
+        function removeHighlight() {
+            const currentHighlighted = suggestionsContainer.querySelector('.autocomplete-suggestion.highlighted');
+            if (currentHighlighted) {
+                currentHighlighted.classList.remove('highlighted');
+            }
+        }
+
+        function applyHighlight(index) {
+            removeHighlight();
+            const suggestions = suggestionsContainer.querySelectorAll('.autocomplete-suggestion');
+            if (suggestions.length > 0 && index >= 0 && index < suggestions.length) {
+                suggestions[index].classList.add('highlighted');
+                suggestions[index].scrollIntoView({ block: 'nearest' });
+            }
+        }
+
+        searchInput.addEventListener('input', () => {
+            clearTimeout(timeoutId);
+            const query = searchInput.value;
+
+            if (query.length < 3) {
+                suggestionsContainer.innerHTML = '';
+                highlightedIndex = -1;
+                return;
+            }
+
+            timeoutId = setTimeout(() => {
+                fetch(`/autocomplete?q=${query}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        suggestionsContainer.innerHTML = '';
+                        highlightedIndex = -1; // Reset highlight on new data
+                        data.forEach((suggestion, index) => {
+                            const suggestionElement = document.createElement('div');
+                            suggestionElement.classList.add('autocomplete-suggestion');
+                            // render suggestion with matched substrings highlighted
+                            const frag = highlightMatch(suggestion, query);
+                            suggestionElement.appendChild(frag);
+                            suggestionElement.addEventListener('click', () => {
+                                selectSuggestion(suggestion);
+                            });
+                            suggestionElement.addEventListener('mouseover', () => {
+                                removeHighlight();
+                                suggestionElement.classList.add('highlighted');
+                                highlightedIndex = index;
+                            });
+                            suggestionsContainer.appendChild(suggestionElement);
+                        });
+                    });
+            }, 300);
+        });
+
+        searchInput.addEventListener('keydown', (e) => {
+            const suggestions = suggestionsContainer.querySelectorAll('.autocomplete-suggestion');
+            if (suggestions.length === 0) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                highlightedIndex = (highlightedIndex + 1) % suggestions.length;
+                applyHighlight(highlightedIndex);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                highlightedIndex = (highlightedIndex - 1 + suggestions.length) % suggestions.length;
+                applyHighlight(highlightedIndex);
+            } else if (e.key === 'Enter') {
+                if (highlightedIndex > -1) {
+                    e.preventDefault();
+                    selectSuggestion(suggestions[highlightedIndex].textContent);
+                }
+            }
+        });
+
+        // Clear suggestions when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                suggestionsContainer.innerHTML = '';
+                highlightedIndex = -1;
+            }
+        });
+    </script>
+</body>
+</html>

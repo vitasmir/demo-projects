@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  elasticsearch:
+    container_name: elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.2.0
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data 
+    environment:
+      - discovery.type=single-node
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=changeme
+      - xpack.security.http.ssl.enabled=false
+      # Limit the JVM heap for Elasticsearch. Adjust to fit your host RAM (do not exceed ~50% of host RAM).
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      # disable memory swapping in Elasticsearch; requires memlock ulimits
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sSf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - projects-network
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:9.2.0
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    volumes:
+      - ./config/kibana.yml:/usr/share/kibana/config/kibana.yml
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      XPACK_MONITORING_ENABLED: "true"
+      XPACK_MONITORING_COLLECTION_ENABLED: "true"
+      XPACK_SECURITY_ENABLED: "true"
+      ELASTICSEARCH_USERNAME: elastic
+      ELASTICSEARCH_PASSWORD: changeme
+    networks:
+      - projects-network
+    depends_on:
+      - elasticsearch
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:9.2.0
+    container_name: logstash
+    ports:
+      - "5044:5044"
+    environment: 
+      # Lower Logstash heap unless you are sure the host has enough RAM. Adjust as needed.
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      ELASTICSEARCH_USERNAME: elastic
+      ELASTICSEARCH_PASSWORD: changeme
+      ELASTICSEARCH_HOSTS: "https://elasticsearch:9200"
+    networks:
+      - projects-network
+    depends_on:
+      - elasticsearch
+
+networks:
+  projects-network:
+    external: true
+
+volumes:
+  esdata:
+    driver: local

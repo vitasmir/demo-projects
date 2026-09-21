@@ -1,0 +1,16 @@
+<section class="employee-backup">
+	<h2>Employee backup</h2>
+	<div class="employee-backup__actions">
+		<button type="button" class="btn btn-outline-primary" (click)="exportEmployees()">Export employees</button>
+		<button type="button" class="btn btn-outline-primary" (click)="importEmployees()">Import employees</button>
+		<button type="button" class="btn btn-outline-secondary" (click)="exportChanges()">Export changes</button>
+		<button type="button" class="btn btn-outline-secondary" (click)="importChanges()">Import changes</button>
+		<button type="button" class="btn btn-outline-danger" (click)="deleteEmployees()">Delete employees</button>
+	</div>
+	@if (isBusy()) {
+		<p>Processing employee data...</p>
+	}
+	@if (message()) {
+		<p class="employee-backup__message">{{ message() }}</p>
+	}
+</section>

@@ -1,0 +1,73 @@
+/* Add custom styles for the confirmation dialog if needed */
+
+.modal-content {
+    border-radius: 20px;
+
+}
+
+.mat-mdc-dialog-component-host {
+    background-color: white;
+}
+
+.light-pink-background {
+    background-color: white;
+}
+
+.modal-title {
+    font-size: 1.2em;
+    margin-bottom: 10px;
+    /* Space below the title */
+    color: #333;
+    /* Darker title color */
+}
+
+.modal-message {
+    font-size: 0.9em;
+    color: #555;
+    /* Slightly darker message color */
+    margin-bottom: 15px;
+}
+
+.modal-header {
+    padding: 10px;
+}
+
+.modal-body {
+    padding: 10px;
+}
+
+.modal-footer {
+    padding: 10px;
+    display: flex;
+    justify-content: flex-end;
+    /* Align buttons to the right */
+}
+
+button {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    margin-left: 8px;
+    /* Space between buttons */
+}
+
+button.confirm-button {
+    background-color: #5cb85c;
+    /* Green for confirm */
+    color: white;
+}
+
+button.cancel-button {
+    background-color: #d9534f;
+    /* Red for cancel */
+    color: white;
+}
+
+/* Add this class to your global styles.scss or styles.css */
+.custom-dialog-container .mat-dialog-container {
+    padding: 0;
+    overflow: hidden;
+    background-color: #ffc107;
+}

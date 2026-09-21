@@ -1,0 +1,37 @@
+.account-page .card {
+  border-radius: 1rem;
+  border: 1px solid #1f2933;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+.password-hints {
+  border: 1px solid #d7dee7;
+  border-radius: 0.85rem;
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+  padding: 0.9rem 1rem;
+}
+
+.password-hints-title {
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+.password-hints ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.account-role-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.95rem;
+}
+
+.account-role-toggle input {
+  margin-top: 0;
+}
+
+.account-card-disabled {
+  opacity: 0.78;
+}

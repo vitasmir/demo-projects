@@ -1,0 +1,84 @@
+{
+  "realm": "myrealm",
+  "enabled": true,
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "rememberMe": true,
+  "clients": [
+    {
+      "clientId": "myapp-client",
+      "name": "MyApp Angular Client",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:4200/*",
+        "http://localhost:9090/*"
+      ],
+      "webOrigins": [
+        "http://localhost:4200",
+        "http://localhost:9090"
+      ],
+      "protocol": "openid-connect",
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "api.read",
+        "description": "Read API access"
+      },
+      {
+        "name": "task-management-admin",
+        "description": "Task management administration access"
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "demo",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Demo",
+      "lastName": "User",
+      "email": "demo@example.com",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "api.read",
+        "task-management-admin"
+      ]
+    },
+    {
+      "username": "worker",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Worker",
+      "lastName": "User",
+      "email": "worker@example.com",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "worker123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "api.read"
+      ]
+    }
+  ]
+}

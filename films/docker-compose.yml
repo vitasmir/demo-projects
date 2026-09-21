@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  films:
+    # Build image from local Dockerfile
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: films:latest
+
+    # Expose application port
+    ports:
+      - "8080:8080"
+
+    # Runtime configuration - override with env vars if needed
+    environment:
+      - JAVA_OPTS=${JAVA_OPTS:-"-Xms256m -Xmx512m"}
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-"default"}
+
+    restart: unless-stopped
+
+    # Healthcheck: prefers actuator health endpoint, falls back to root
+    healthcheck:
+      test: ["CMD-SHELL", "curl --silent --fail http://localhost:8080/actuator/health || curl --silent --fail http://localhost:8080/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5

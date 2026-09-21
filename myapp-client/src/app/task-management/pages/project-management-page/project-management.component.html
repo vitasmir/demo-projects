@@ -1,0 +1,88 @@
+<div class="container py-3">
+  <h2>Projekty</h2>
+
+  @if (errorMessage !== '') {
+  <div class="alert alert-danger">{{ errorMessage }}</div>
+  }
+
+  @if (currentUser == null) {
+  @if (initializingCurrentUser) {
+  <div class="alert alert-info py-2">Načítám Task Management uživatele z JWT tokenu…</div>
+  } @else {
+  <div class="alert alert-warning py-2 d-flex justify-content-between align-items-center gap-2 flex-wrap">
+    <span>Správa projektů vyžaduje přihlášení. Pro registraci nového účtu otevři samostatnou stránku účtů.</span>
+    <button class="btn btn-outline-dark btn-sm" (click)="openAccountManagement('signup')">Otevřít signup stránku</button>
+  </div>
+  }
+  } @else {
+  <div class="row g-3">
+    <div class="col-md-5">
+      <div class="card p-3">
+        <h5>Nový projekt</h5>
+        <input class="form-control mb-2" placeholder="Název projektu" [(ngModel)]="projectForm.name" />
+        <textarea class="form-control mb-3" rows="4" placeholder="Popis projektu" [(ngModel)]="projectForm.description"></textarea>
+        <button class="btn btn-primary" (click)="createProject()">Vytvořit projekt</button>
+      </div>
+
+      @if (currentUser.admin === true) {
+      <div class="card p-3 mt-3">
+        <h5>Administrace projektu a účtů</h5>
+        <p class="small text-muted mb-3">Správa přístupů i vytváření účtů je přesunuté na samostatné stránky.</p>
+        <div class="d-flex gap-2 flex-wrap">
+          <button class="btn btn-success" (click)="openProjectAdministration()">
+            Otevřít administraci projektu
+          </button>
+          <button class="btn btn-success" (click)="openAccountManagement('admin')">Správa účtů a adminů</button>
+        </div>
+      </div>
+      }
+    </div>
+
+    <div class="col-md-7">
+      <div class="card p-3">
+        <h5>Seznam projektů</h5>
+
+        @if (projectsLoaded && projects.length === 0) {
+        <p class="mb-0">Zatím není vytvořen žádný projekt nebo do žádného nemáš přístup.</p>
+        }
+
+        @if (projectsLoaded && projects.length > 0) {
+        @for (project of projects; track project.id) {
+        <div class="project-item d-flex justify-content-between align-items-center gap-2">
+          <div class="project-main">
+            <div class="fw-semibold">{{ project.name }}</div>
+            <div class="small text-muted">{{ project.description }}</div>
+          </div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-primary" (click)="openProject(project)">Otevřít aktuální sprint</button>
+            @if (currentUser.admin === true) {
+            <button class="btn btn-sm btn-outline-danger" (click)="deleteProject(project)">Smazat</button>
+            }
+          </div>
+        </div>
+        }
+        }
+      </div>
+    </div>
+
+  </div>
+
+  @if (deleteDialog != null) {
+  <div class="delete-dialog-backdrop" (click)="closeDeleteDialog()"></div>
+  <div class="delete-dialog" role="dialog" aria-modal="true" [attr.aria-labelledby]="'delete-dialog-title'">
+    <div class="delete-dialog__card">
+      <h5 id="delete-dialog-title" class="mb-2">{{ deleteDialogTitle() }}</h5>
+      <p class="mb-3 text-muted">{{ deleteDialogMessage() }}</p>
+      <div class="delete-dialog__actions">
+        <button type="button" class="btn btn-outline-secondary" [disabled]="deleteDialogSubmitting" (click)="closeDeleteDialog()">
+          Zrušit
+        </button>
+        <button type="button" class="btn btn-danger" [disabled]="deleteDialogSubmitting" (click)="confirmDeleteDialog()">
+          {{ deleteDialogConfirmLabel() }}
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+  }
+</div>

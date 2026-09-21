@@ -1,0 +1,28 @@
+{
+  "/api": {
+    "target": "http://localhost:9090",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
+  "/ws": {
+    "target": "ws://localhost:9090",
+    "ws": true,
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
+  "/ws2": {
+    "target": "ws://localhost:9090",
+    "ws": true,
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
+  "/realms": {
+    "target": "http://localhost:8180",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  }
+}

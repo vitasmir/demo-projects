@@ -1,0 +1,131 @@
+@import 'flatpickr/dist/flatpickr.min.css';
+
+.light-pink-background {
+  background: #fff0f6;
+  padding: 12px;
+}
+.modal-content {
+    border-radius: 20px;
+    background-color: white;
+    overflow: visible;
+}
+
+:host ::ng-deep .mat-mdc-dialog-surface {
+    overflow: visible !important;
+}
+
+:host ::ng-deep .mat-mdc-dialog-container {
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+::ng-deep .mat-datepicker-content .mat-calendar {
+    background-color: rgb(13, 238, 219) !important;
+}
+
+::ng-deep .mat-datepicker-content .mat-calendar-header {
+    background-color: rgb(13, 238, 219) !important;
+}
+
+::ng-deep .mat-datepicker-popup {
+    background-color: rgb(13, 238, 219) !important;
+    margin-top: 0px !important;
+    /* Reset any top margin */
+    transform: translateY(0) !important;
+    /* Reset any translateY transform */
+    transform-origin: top center !important;
+    /* Ensure the transform origin is top left */
+    top: auto !important;
+    /* Reset top positioning */
+    bottom: 0px !important;
+    /* Reset bottom positioning */
+}
+
+::ng-deep .mat-datepicker-content {
+    background-color: rgb(13, 238, 219) !important;
+}
+
+.modal-content .modal-header {
+    background-color: white;
+    color: black;
+}
+
+.modal-content .modal-body {
+    background-color: white;
+    color: black;
+}
+
+.modal-content .modal-footer {
+    background-color: white;
+    color: black;
+}
+
+.modal-content .modal-header .close {
+    color: black
+}
+
+tr:hover {
+    background-color: none;
+    cursor: pointer;
+}
+
+:host ::ng-deep .flatpickr-calendar {
+    z-index: 10000 !important;
+}
+
+:host ::ng-deep .flatpickr-calendar.static {
+    bottom: calc(100% + 0.5rem);
+    top: auto !important;
+}
+
+.date-input-wrap {
+    position: relative;
+}
+
+.manager-rights-control {
+    align-items: center;
+    cursor: pointer;
+    display: inline-flex;
+    gap: 0.5rem;
+    margin: 0;
+}
+
+.manager-rights-control .form-check-input {
+    appearance: auto;
+    border: 2px solid #495057;
+    cursor: pointer;
+    flex: 0 0 auto;
+    height: 1.125rem;
+    margin: 0;
+    opacity: 1;
+    width: 1.125rem;
+}
+
+.manager-rights-control .form-check-input:checked {
+    accent-color: #198754;
+}
+
+.employee-date-input {
+    padding-right: 2.5rem;
+}
+
+.date-input-icon {
+    position: absolute;
+    top: 50%;
+    right: 0.25rem;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0.55rem;
+    border: 0;
+    background: transparent;
+    transform: translateY(-50%);
+    color: #495057;
+    cursor: pointer;
+}
+
+.date-input-icon svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+}
