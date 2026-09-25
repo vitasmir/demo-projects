@@ -28,10 +28,10 @@
 
     <div class="card p-3 mb-3">
         <div class="top-workflow-tabs mb-3">
-            <button class="btn" [class.btn-primary]="activeTopMenu === 'sprints'" [class.btn-outline-primary]="activeTopMenu !== 'sprints'" (click)="showMenu('sprints')">Sprints</button>
-            <button class="btn" [class.btn-primary]="activeTopMenu === 'stories'" [class.btn-outline-primary]="activeTopMenu !== 'stories'" (click)="showMenu('stories')">User stories</button>
-            <button class="btn" [class.btn-primary]="activeTopMenu === 'tasks'" [class.btn-outline-primary]="activeTopMenu !== 'tasks'" (click)="showMenu('tasks')">Tasks</button>
-            <button class="btn" [class.btn-primary]="activeTopMenu === 'my-tasks'" [class.btn-outline-primary]="activeTopMenu !== 'my-tasks'" (click)="showMenu('my-tasks')">Moje tasky</button>
+            <button class="btn" [class.btn-danger]="activeTopMenu === 'sprints'" [class.btn-outline-primary]="activeTopMenu !== 'sprints'" [attr.aria-pressed]="activeTopMenu === 'sprints'" (click)="showMenu('sprints')">Sprints</button>
+            <button class="btn" [class.btn-danger]="activeTopMenu === 'stories'" [class.btn-outline-primary]="activeTopMenu !== 'stories'" [attr.aria-pressed]="activeTopMenu === 'stories'" (click)="showMenu('stories')">User stories</button>
+            <button class="btn" [class.btn-danger]="activeTopMenu === 'tasks'" [class.btn-outline-primary]="activeTopMenu !== 'tasks'" [attr.aria-pressed]="activeTopMenu === 'tasks'" (click)="showMenu('tasks')">Tasks</button>
+            <button class="btn" [class.btn-danger]="activeTopMenu === 'my-tasks'" [class.btn-outline-primary]="activeTopMenu !== 'my-tasks'" [attr.aria-pressed]="activeTopMenu === 'my-tasks'" (click)="showMenu('my-tasks')">Moje tasky</button>
         </div>
 
         <div class="row g-2">
@@ -546,10 +546,10 @@
                 </button>
                 <span class="small text-muted">Zobrazit:</span>
                 <div class="btn-group btn-group-sm" role="group" aria-label="Filtr zobrazení tasků">
-                    <button type="button" class="btn" [class.btn-primary]="taskDisplayMode === 'all'" [class.btn-outline-primary]="taskDisplayMode !== 'all'"
-                        (click)="setTaskDisplayMode('all')">Všechny tasky</button>
-                    <button type="button" class="btn" [class.btn-primary]="taskDisplayMode === 'mine'" [class.btn-outline-primary]="taskDisplayMode !== 'mine'"
-                            (click)="setTaskDisplayMode('mine')">Jen moje tasky</button>
+                    <button type="button" class="btn" [class.btn-danger]="taskDisplayMode === 'all'" [class.btn-outline-secondary]="taskDisplayMode !== 'all'"
+                        [attr.aria-pressed]="taskDisplayMode === 'all'" (click)="setTaskDisplayMode('all')">Všechny tasky</button>
+                    <button type="button" class="btn" [class.btn-danger]="taskDisplayMode === 'mine'" [class.btn-outline-secondary]="taskDisplayMode !== 'mine'"
+                        [attr.aria-pressed]="taskDisplayMode === 'mine'" (click)="setTaskDisplayMode('mine')">Jen moje tasky</button>
                 </div>
                 <button class="btn btn-sm btn-outline-secondary me-2" (click)="showMenu('stories')">Zpět na User stories</button>
                 <button class="btn btn-sm btn-outline-secondary" (click)="showMenu('sprints')">Zpět na Sprint</button>
