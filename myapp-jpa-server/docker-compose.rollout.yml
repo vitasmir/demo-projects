@@ -1,0 +1,25 @@
+services:
+  backend-canary:
+    extends:
+      file: docker-compose.yml
+      service: backend
+    build: null
+    image: ${DATATABLES_CANARY_IMAGE:?Set DATATABLES_CANARY_IMAGE to the new backend image}
+    ports: []
+
+  myapp-client:
+    depends_on:
+      backend-canary:
+        condition: service_healthy
+    environment:
+      CANARY_BACKEND_PERCENTAGE: ${CANARY_BACKEND_PERCENTAGE:-10}
+    volumes:
+      - ./nginx.rollout.conf.template:/etc/nginx/templates/default.conf.template:ro
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        envsubst '$$CANARY_BACKEND_PERCENTAGE'
+        < /etc/nginx/templates/default.conf.template
+        > /etc/nginx/conf.d/default.conf
+        && exec nginx -g 'daemon off;'
