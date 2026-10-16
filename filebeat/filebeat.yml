@@ -1,20 +1,22 @@
 filebeat.inputs:
-- type: container
-  enabled: true
-  paths:
-    - /var/lib/docker/containers/*/*.log
-  processors:
-    - decode_json_fields:
-        when:
-          regexp:
-            message: '^\s*\{'
-        fields: ["message"]
-        target: ""
-        overwrite_keys: true
-        add_error_key: true
-    - drop_fields:
-        fields: ["agent", "container", "ecs", "event", "host", "input", "log", "stream"]
-        ignore_missing: true
+  - type: container
+    enabled: true
+    paths:
+      - /var/lib/docker/containers/*/*.log
+    processors:
+      - add_docker_metadata:
+          host: "unix:///var/run/docker.sock"
+      - decode_json_fields:
+          when:
+            regexp:
+              message: '^\s*\{'
+          fields: ["message"]
+          target: ""
+          overwrite_keys: true
+          add_error_key: true
+      - drop_fields:
+          fields: ["agent", "ecs", "event", "host", "input", "log", "stream"]
+          ignore_missing: true
 
 setup.template.enabled: false
 setup.ilm.enabled: false

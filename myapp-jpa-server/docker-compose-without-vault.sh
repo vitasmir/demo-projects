@@ -1,0 +1,20 @@
+#!/bin/sh
+export DATATABLES_DB_NAME="datatables"
+export DATATABLES_DB_PASSWORD="password"
+export DATATABLES_DB_USERNAME="postgres"
+export DATATABLES_KEYCLOAK_ADMIN_PASSWORD="demo123"
+export DATATABLES_KEYCLOAK_ADMIN_USERNAME="demo"
+export DATATABLES_RABBITMQ_PASSWORD="mypassword"
+export DATATABLES_RABBITMQ_USERNAME="myuser"
+script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+exec docker compose -f "${script_dir}/docker-compose.yml" "$@"
+unset VAULT_ADDR
+unset VAULT_TOKEN
+unset VAULT_SECRET_PATH
+unset DATATABLES_DB_NAME
+unset DATATABLES_DB_USERNAME
+unset DATATABLES_DB_PASSWORD
+unset DATATABLES_RABBITMQ_USERNAME
+unset DATATABLES_RABBITMQ_PASSWORD
+unset DATATABLES_KEYCLOAK_ADMIN_USERNAME
+unset DATATABLES_KEYCLOAK_ADMIN_PASSWORD    
