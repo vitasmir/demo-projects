@@ -6,6 +6,7 @@ import org.apache.tomcat.util.descriptor.web.SecurityCollection;
 import org.apache.tomcat.util.descriptor.web.SecurityConstraint;
 import org.springframework.boot.tomcat.servlet.TomcatServletWebServerFactory;
 import org.springframework.boot.web.server.servlet.ServletWebServerFactory;
+import org.springframework.boot.web.server.autoconfigure.ServerProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -13,10 +14,14 @@ import org.springframework.context.annotation.Configuration;
 public class TomcatConfig {
 
     @Bean
-    public ServletWebServerFactory servletContainer() {
+    public ServletWebServerFactory servletContainer(ServerProperties serverProperties) {
+        boolean sslEnabled = serverProperties.getSsl() != null && serverProperties.getSsl().isEnabled();
         TomcatServletWebServerFactory tomcat = new TomcatServletWebServerFactory() {
             @Override
             protected void postProcessContext(Context context) {
+                if (!sslEnabled) {
+                    return;
+                }
                 SecurityConstraint securityConstraint = new SecurityConstraint();
                 securityConstraint.setUserConstraint("CONFIDENTIAL");
                 SecurityCollection collection = new SecurityCollection();
@@ -25,7 +30,9 @@ public class TomcatConfig {
                 context.addConstraint(securityConstraint);
             }
         };
-        tomcat.addAdditionalConnectors(redirectConnector());
+        if (sslEnabled) {
+            tomcat.addAdditionalConnectors(redirectConnector());
+        }
         return tomcat;
     }
     
@@ -40,4 +47,3 @@ public class TomcatConfig {
     }
     
 }
-
