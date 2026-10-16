@@ -9,10 +9,10 @@ services:
       xpack.security.enabled: "false"
       ES_JAVA_OPTS: "-Xms512m -Xmx512m"
     volumes:
-      - elasticsearch-data-v9:/usr/share/elasticsearch/data
+      - elasticsearch-data:/usr/share/elasticsearch/data
     ports:
       - "9200:9200"
     restart: unless-stopped
 
 volumes:
-  elasticsearch-data-v9:
+  elasticsearch-data:
