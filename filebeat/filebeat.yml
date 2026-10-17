@@ -1,8 +1,8 @@
 filebeat.inputs:
-  - type: container
+  - type: filestream
     enabled: true
     paths:
-      - ${HOME}/jpa-server-logs/*.json
+      - /logs/*.json
     processors:
       - add_docker_metadata:
           host: "unix:///var/run/docker.sock"
@@ -25,5 +25,5 @@ output.elasticsearch:
   hosts: ["http://elasticsearch:9200"]
   index: "myapp-logs-%{+yyyy-MM-dd}"
 
-logging.level: info
+logging.level: INFO
 logging.to_files: false

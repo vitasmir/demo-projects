@@ -20,12 +20,20 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      kibana:
+        condition: service_healthy
+      filebeat:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-   
+
   backend:
     build: .
     logging:
@@ -69,6 +77,16 @@ services:
       timeout: 3s
       retries: 12
       start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      kibana:
+        condition: service_healthy
+      
    
  # Elastic Stack (ELK)
   elasticsearch:
@@ -94,6 +112,7 @@ services:
       start_period: 5s
     networks:
       - projects-network
+    
 
   kibana:
     image: docker.elastic.co/kibana/kibana:7.17.13
@@ -111,6 +130,10 @@ services:
       start_period: 20s
     networks:
       - projects-network
+
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
 
 
 #  logstash:
@@ -139,6 +162,7 @@ services:
     volumes:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${HOME}/jpa-server-logs:/logs:ro
       - ../filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
       - ../filebeat/modules.d:/usr/share/filebeat/modules.d:ro
 #      - logstash
@@ -150,6 +174,9 @@ services:
       start_period: 5s
     networks:
       - projects-network
+    depends_on:
+      backend:
+        condition: service_healthy
 
   rabbitmq:
     image: rabbitmq:4.1.8
