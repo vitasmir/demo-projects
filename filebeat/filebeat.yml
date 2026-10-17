@@ -23,7 +23,7 @@ setup.ilm.enabled: false
 
 output.elasticsearch:
   hosts: ["http://elasticsearch:9200"]
-  index: "myapp-logs-%{+yyyy.MM.dd}"
+  index: "myapp-logs-%{+yyyy-MM-dd}"
 
 logging.level: info
 logging.to_files: false
