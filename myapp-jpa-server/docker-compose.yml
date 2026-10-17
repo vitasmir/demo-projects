@@ -190,7 +190,7 @@ services:
     ports:
       - "8180:8080"
     volumes:
-      - ../../myapp-jpa-server/src/main/resources/keycloak:/opt/keycloak/data/import:ro
+      - ./src/main/resources/keycloak:/opt/keycloak/data/import:ro
     networks:
       - projects-network
     healthcheck:
